@@ -31,15 +31,6 @@ const cars: Car[] = [
   { name: "Ford Mustang ’69", spec: '320 cv • 0–100 km/h 5,6 s', price: 'R$ 680k', image: '/cars/mustang.jpg', category: 'Clássicos' },
 ]
 
-const garageProjects: GarageProject[] = [
-  { car: cars[0], name: 'GT3 Track Day', status: 'Em andamento', progress: 55, updated: 'Hoje, 14:32' },
-  { car: cars[2], name: 'M5 Daily Performance', status: 'Planejamento', progress: 30, updated: 'Ontem, 19:10' },
-  { car: cars[5], name: 'Mustang Restomod', status: 'Em montagem', progress: 72, updated: '12 ago. 2026' },
-  { car: cars[1], name: 'RS Q8 Stage 2', status: 'Orçamento', progress: 18, updated: '10 ago. 2026' },
-  { car: cars[4], name: 'Model S Street', status: 'Concluído', progress: 100, updated: '02 ago. 2026' },
-  { car: cars[3], name: 'Challenger 807', status: 'Em andamento', progress: 44, updated: '28 jul. 2026' },
-]
-
 const buildParts = [
   { id: 'motor', name: 'Stage 2 ECU', detail: '+82 cv estimados', price: 'R$ 8.900', icon: Zap },
   { id: 'suspensao', name: 'Suspensão coilover', detail: 'Altura e carga ajustáveis', price: 'R$ 12.400', icon: SlidersHorizontal },
@@ -49,17 +40,13 @@ const buildParts = [
 
 const initialStages = [
   { title: 'Definir o projeto', detail: 'Objetivo, uso e orçamento inicial', done: true },
-  { title: 'Escolher o veículo', detail: 'Porsche 911 GT3 adicionado', done: true },
+  { title: 'Escolher o veículo', detail: 'Defina o carro que receberá a build.', done: false },
   { title: 'Planejar performance', detail: 'Motor, escape e arrefecimento', done: false },
   { title: 'Acerto de dinâmica', detail: 'Suspensão, pneus e freios', done: false },
   { title: 'Montagem e validação', detail: 'Instalação, testes e documentação', done: false },
 ]
 
-const initialExpenses = [
-  { id: 1, item: 'Porsche 911 GT3', category: 'Veículo', value: 1200000 },
-  { id: 2, item: 'Stage 2 ECU', category: 'Performance', value: 8900 },
-  { id: 3, item: 'Suspensão coilover', category: 'Dinâmica', value: 12400 },
-]
+const initialExpenses: Array<{ id: number; item: string; category: string; value: number }> = []
 
 const currency = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })
 const makeAliases: Record<string, string> = { vw: 'volkswagen', chevy: 'chevrolet', mercedes: 'mercedes-benz', merc: 'mercedes-benz', landrover: 'land rover' }
@@ -141,12 +128,11 @@ function Overview({ onBrowse }: { onBrowse: () => void }) {
   return <><section className="hero"><h2>Todo projeto começa com um plano.</h2><p>Adicione o primeiro veículo para começar a construir sua garagem digital.</p></section><section className="models"><div className="section-head"><h2>Explore modelos</h2><SearchField value={query} onChange={setQuery} /></div><CarGrid items={visibleCars} onExplore={onBrowse} /></section></>
 }
 
-function Garage({ projects, onBrowse, onOpenBuild }: { projects: GarageProject[]; onBrowse: () => void; onOpenBuild: () => void }) {
-  const [selectedProject, setSelectedProject] = useState(projects[0]?.name ?? '')
+function Garage({ projects, activeProjectName, onBrowse, onOpenBuild }: { projects: GarageProject[]; activeProjectName?: string; onBrowse: () => void; onOpenBuild: (project: GarageProject) => void }) {
   return <section className="garage" aria-label="Seus projetos">
     <div className="garage-hero"><div><span className="eyebrow">GARAGEM DIGITAL</span><h2><span>Seus</span><span>Projetos</span></h2></div><div className="garage-overview"><strong>{String(projects.length).padStart(2, '0')}</strong><span>projetos salvos</span><small>{projects.filter((project) => project.progress > 0 && project.progress < 100).length} em andamento</small></div></div>
     <div className="garage-toolbar"><div><h3>Todos os projetos</h3><p>Acompanhe suas builds e continue de onde parou.</p></div><button className="primary-action" onClick={onBrowse}><Plus size={15} /> Novo projeto</button></div>
-    <div className="project-grid" aria-label="Projetos da garagem">{projects.map((project) => <article className={`project-card ${selectedProject === project.name ? 'selected' : ''}`} key={`${project.name}-${project.car.name}`} onClick={() => setSelectedProject(project.name)}><div className="project-image">{project.car.image ? <img src={project.car.image} alt={project.car.name} /> : <span className="project-no-image"><ImageOff size={24} /></span>}<span className={`project-badge ${project.progress === 100 ? 'complete' : ''}`}>{project.status}</span><button className="project-menu" onClick={(event) => { event.stopPropagation(); setSelectedProject(project.name) }} aria-label={`Mais opções para ${project.name}`}><MoreHorizontal size={17} /></button></div><div className="project-copy"><span className="project-category">{project.car.category}</span><h3>{project.name}</h3><p>{project.car.name} · {project.car.spec.split(' • ')[0]}</p><div className="project-progress"><div><i style={{ width: `${project.progress}%` }} /></div><span>{project.progress}%</span></div><footer><span><Clock3 size={12} /> {project.updated}</span><button onClick={(event) => { event.stopPropagation(); onOpenBuild() }}>Ver projeto <ChevronRight size={13} /></button></footer></div></article>)}</div>
+    {projects.length === 0 ? <div className="empty-garage"><CarFront size={28} /><h3>Nenhum carro na sua garagem.</h3><p>Pesquise um veículo e adicione-o para iniciar sua primeira build.</p><button className="primary-action" onClick={onBrowse}><Plus size={15} /> Explorar carros</button></div> : <div className="project-grid" aria-label="Projetos da garagem">{projects.map((project) => <article className={`project-card ${activeProjectName === project.name ? 'selected' : ''}`} key={`${project.name}-${project.car.name}`} onClick={() => onOpenBuild(project)}><div className="project-image">{project.car.image ? <img src={project.car.image} alt={project.car.name} /> : <span className="project-no-image"><ImageOff size={24} /></span>}<span className={`project-badge ${project.progress === 100 ? 'complete' : ''}`}>{project.status}</span><button className="project-menu" onClick={(event) => { event.stopPropagation(); onOpenBuild(project) }} aria-label={`Abrir ${project.name}`}><MoreHorizontal size={17} /></button></div><div className="project-copy"><span className="project-category">{project.car.category}</span><h3>{project.name}</h3><p>{project.car.name} · {project.car.spec.split(' • ')[0]}</p><div className="project-progress"><div><i style={{ width: `${project.progress}%` }} /></div><span>{project.progress}%</span></div><footer><span><Clock3 size={12} /> {project.updated}</span><button onClick={(event) => { event.stopPropagation(); onOpenBuild(project) }}>Ver projeto <ChevronRight size={13} /></button></footer></div></article>)}</div>}
   </section>
 }
 
@@ -180,12 +166,13 @@ function ExploreCars({ onAddVehicle }: { onAddVehicle: (vehicle: VehicleSearchRe
   return <section className="content-page explore-page"><div className="wide-hero explore-hero"><div><span className="eyebrow">BUSCA AUTOMOTIVA GLOBAL</span><h2>Pesquise marca, modelo ou versão.</h2><p>Modelos vêm do catálogo do fabricante. Fotos só aparecem quando correspondem ao carro validado.</p></div><Search size={54} strokeWidth={1.15} /></div><form className="vehicle-search-panel" onSubmit={runSearch}><label className="vehicle-query"><Search size={19} /><span><small>MARCA, MODELO OU VERSÃO</small><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Ex.: Opala, Chevette, Toyota Corolla ou Porsche 911 GT3" aria-label="Marca e modelo do carro" /></span>{query && <button type="button" onClick={() => { setQuery(''); setResults([]); setSearched(false); setError('') }} aria-label="Limpar busca"><X size={16} /></button>}</label><label className="year-field"><CalendarDays size={18} /><span><small>ANO</small><select value={year ?? ''} onChange={(event) => setYear(event.target.value ? Number(event.target.value) : undefined)} aria-label="Ano do modelo"><option value="">Todos os anos</option>{Array.from({ length: 67 }, (_, index) => 2026 - index).map((item) => <option key={item}>{item}</option>)}</select></span></label><button className="search-action" type="submit" disabled={loading}>{loading ? <LoaderCircle className="spin" size={17} /> : <Search size={17} />}{loading ? 'Buscando...' : 'Pesquisar carro'}</button></form><div className="search-examples"><span>Experimente:</span>{['Chevrolet Opala', 'Chevette', 'Toyota Corolla', 'Porsche 911 GT3'].map((item) => <button type="button" key={item} onClick={() => useExample(item)}>{item}</button>)}</div>{error && <div className="search-feedback error"><X size={15} /><span>{error}</span></div>}{selected && <div className="search-feedback success"><Check size={15} /><span><strong>{selected.make} {selected.model}</strong> foi adicionado à sua garagem.</span><button onClick={() => setSelected(null)} aria-label="Fechar aviso"><X size={14} /></button></div>}{loading && <div className="search-loading"><LoaderCircle className="spin" size={25} /><strong>Procurando modelos...</strong><span>Validando o catálogo do fabricante.</span></div>}{!loading && results.length > 0 && <><div className="results-title"><div><h2>Resultados encontrados</h2><p>{results.length} {results.length === 1 ? 'modelo compatível' : 'modelos compatíveis'} {year ? `para ${year}` : 'em todos os anos'}</p></div><span><Database size={13} /> Catálogo Build Lab + vPIC</span></div><VehicleResultGrid items={results} onSelect={selectVehicle} /></>}{!loading && !searched && <div className="featured-catalog"><div className="results-title"><div><h2>Modelos em destaque</h2><p>Fotos presentes neste catálogo já foram associadas ao modelo.</p></div></div><CarGrid items={cars} onExplore={selectFeatured} /></div>}</section>
 }
 
-function MyBuild() {
+function MyBuild({ project }: { project?: GarageProject }) {
   const [selectedParts, setSelectedParts] = useState<string[]>(['motor'])
   const [saved, setSaved] = useState(false)
   const togglePart = (id: string) => setSelectedParts((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])
   const progress = Math.min(25 + selectedParts.length * 15, 100)
-  return <section className="content-page build-page"><div className="build-hero"><img src="/cars/porsche.jpg" alt="Porsche 911 GT3" /><div className="build-hero-copy"><span className="eyebrow">PROJETO ATIVO</span><h2>Porsche 911 GT3</h2><p>Performance de rua com acerto preciso para pista.</p><div className="progress-row"><span><b>{progress}%</b> planejado</span><div><i style={{ width: `${progress}%` }} /></div></div></div></div>{saved && <div className="success-note"><Check size={15} /> Build salva com sucesso.</div>}<div className="section-title"><div><h2>Componentes da build</h2><p>Selecione as modificações para o seu projeto.</p></div><button className="primary-action" onClick={() => { setSaved(true); window.setTimeout(() => setSaved(false), 2400) }}><Save size={15} /> Salvar build</button></div><div className="parts-grid">{buildParts.map((part) => { const Icon = part.icon; const selected = selectedParts.includes(part.id); return <button className={`part-card ${selected ? 'selected' : ''}`} key={part.id} onClick={() => togglePart(part.id)}><span className="part-icon"><Icon size={20} /></span><span><strong>{part.name}</strong><small>{part.detail}</small></span><b>{part.price}</b><i>{selected ? <Check size={14} /> : <Plus size={14} />}</i></button> })}</div></section>
+  if (!project) return <section className="content-page empty-tab"><Wrench size={30} strokeWidth={1.4} /><h2>Selecione um carro primeiro.</h2><p>Abra um projeto da sua garagem para configurar a build certa.</p></section>
+  return <section className="content-page build-page"><div className="build-hero">{project.car.image ? <img src={project.car.image} alt={project.car.name} /> : <div className="build-no-image"><ImageOff size={30} /><span>Imagem não validada</span></div>}<div className="build-hero-copy"><span className="eyebrow">PROJETO ATIVO</span><h2>{project.car.name}</h2><p>{project.name} · personalize as modificações para este carro.</p><div className="progress-row"><span><b>{progress}%</b> planejado</span><div><i style={{ width: `${progress}%` }} /></div></div></div></div>{saved && <div className="success-note"><Check size={15} /> Build salva com sucesso.</div>}<div className="section-title"><div><h2>Componentes da build</h2><p>Selecione as modificações para {project.car.name}.</p></div><button className="primary-action" onClick={() => { setSaved(true); window.setTimeout(() => setSaved(false), 2400) }}><Save size={15} /> Salvar build</button></div><div className="parts-grid">{buildParts.map((part) => { const Icon = part.icon; const selected = selectedParts.includes(part.id); return <button className={`part-card ${selected ? 'selected' : ''}`} key={part.id} onClick={() => togglePart(part.id)}><span className="part-icon"><Icon size={20} /></span><span><strong>{part.name}</strong><small>{part.detail}</small></span><b>{part.price}</b><i>{selected ? <Check size={14} /> : <Plus size={14} />}</i></button> })}</div></section>
 }
 
 function Stages() {
@@ -226,11 +213,12 @@ function SettingsPage() {
   </section>
 }
 
-function AppContent({ active, projects, onNavigate, onAddVehicle }: { active: number; projects: GarageProject[]; onNavigate: (index: number) => void; onAddVehicle: (vehicle: VehicleSearchResult) => void }) {
+function AppContent({ active, projects, activeProjectName, onNavigate, onAddVehicle, onOpenProject }: { active: number; projects: GarageProject[]; activeProjectName?: string; onNavigate: (index: number) => void; onAddVehicle: (vehicle: VehicleSearchResult) => void; onOpenProject: (project: GarageProject) => void }) {
+  const activeProject = projects.find((project) => project.name === activeProjectName)
   if (active === 0) return <Overview onBrowse={() => onNavigate(2)} />
-  if (active === 1) return <Garage projects={projects} onBrowse={() => onNavigate(2)} onOpenBuild={() => onNavigate(3)} />
+  if (active === 1) return <Garage projects={projects} activeProjectName={activeProjectName} onBrowse={() => onNavigate(2)} onOpenBuild={onOpenProject} />
   if (active === 2) return <ExploreCars onAddVehicle={onAddVehicle} />
-  if (active === 3) return <MyBuild />
+  if (active === 3) return <MyBuild project={activeProject} />
   if (active === 4) return <Stages />
   if (active === 5) return <Budget />
   return <SettingsPage />
@@ -239,18 +227,22 @@ function AppContent({ active, projects, onNavigate, onAddVehicle }: { active: nu
 export default function App() {
   const [active, setActive] = useState(0)
   const [navOpen, setNavOpen] = useState(false)
+  const [activeProjectName, setActiveProjectName] = useState<string>()
   const [projects, setProjects] = useState<GarageProject[]>(() => {
-    try { const saved = window.localStorage.getItem('build-lab-projects'); return saved ? JSON.parse(saved) as GarageProject[] : garageProjects }
-    catch { return garageProjects }
+    try { const saved = window.localStorage.getItem('build-lab-projects-v2'); return saved ? JSON.parse(saved) as GarageProject[] : [] }
+    catch { return [] }
   })
   const current = navItems[active]
-  useEffect(() => { window.localStorage.setItem('build-lab-projects', JSON.stringify(projects)) }, [projects])
-  const addVehicle = (vehicle: VehicleSearchResult) => setProjects((currentProjects) => {
+  useEffect(() => { window.localStorage.setItem('build-lab-projects-v2', JSON.stringify(projects)) }, [projects])
+  const addVehicle = (vehicle: VehicleSearchResult) => {
     const vehicleName = `${vehicle.make} ${vehicle.model}`
     const projectName = `${vehicle.model} ${vehicle.year}`
-    if (currentProjects.some((project) => project.name === projectName && project.car.name === vehicleName)) return currentProjects
     const car: Car = vehicle.featured ?? { name: vehicleName, spec: `${vehicle.year} • Dados oficiais do modelo`, price: 'A consultar', image: vehicle.image ?? '', category: 'Outros' }
-    return [{ car, name: projectName, status: 'Novo projeto', progress: 5, updated: 'Agora' }, ...currentProjects]
-  })
-  return <div className="app-shell"><Sidebar active={active} onChange={setActive} open={navOpen} onClose={() => setNavOpen(false)} />{navOpen && <button className="backdrop" onClick={() => setNavOpen(false)} aria-label="Fechar menu" />}<main><header className="page-header"><button className="menu-button" onClick={() => setNavOpen(true)} aria-label="Abrir menu"><Menu size={20} /></button><div><h1>{current.title}</h1>{active !== 1 && <p>{current.description}</p>}</div></header><AppContent active={active} projects={projects} onNavigate={setActive} onAddVehicle={addVehicle} /></main></div>
+    const nextProject: GarageProject = { car, name: projectName, status: 'Novo projeto', progress: 5, updated: 'Agora' }
+    setProjects((currentProjects) => currentProjects.some((project) => project.name === projectName && project.car.name === vehicleName) ? currentProjects : [nextProject, ...currentProjects])
+    setActiveProjectName(projectName)
+    setActive(1)
+  }
+  const openProject = (project: GarageProject) => { setActiveProjectName(project.name); setActive(3) }
+  return <div className="app-shell"><Sidebar active={active} onChange={setActive} open={navOpen} onClose={() => setNavOpen(false)} />{navOpen && <button className="backdrop" onClick={() => setNavOpen(false)} aria-label="Fechar menu" />}<main><header className="page-header"><button className="menu-button" onClick={() => setNavOpen(true)} aria-label="Abrir menu"><Menu size={20} /></button><div><h1>{current.title}</h1>{active !== 1 && <p>{current.description}</p>}</div></header><AppContent active={active} projects={projects} activeProjectName={activeProjectName} onNavigate={setActive} onAddVehicle={addVehicle} onOpenProject={openProject} /></main></div>
 }
