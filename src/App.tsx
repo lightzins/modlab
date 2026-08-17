@@ -64,11 +64,32 @@ const normalizeText = (value: string) => value.normalize('NFD').replace(/[\u0300
 const displayName = (value: string) => value.toLowerCase().replace(/(^|[\s-])\S/g, (letter) => letter.toUpperCase())
 const displayMake = (value: string) => ({ bmw: 'BMW', gmc: 'GMC', mini: 'MINI', ram: 'RAM', fiat: 'FIAT' }[normalizeText(value)] ?? displayName(value))
 
+async function findModelImage(make: string, model: string): Promise<Partial<Pick<VehicleSearchResult, 'image' | 'imageLabel'>>> {
+  const expectedTokens = normalizeText(`${make} ${model}`).split(' ').filter((token) => token.length > 1)
+  const blockedTokens = ['interior', 'dashboard', 'engine', 'wheel', 'logo', 'badge', 'brochure', 'diagram', 'manual']
+  const params = new URLSearchParams({ action: 'query', generator: 'search', gsrsearch: `"${make} ${model}"`, gsrnamespace: '6', gsrlimit: '18', prop: 'imageinfo', iiprop: 'url', iiurlwidth: '1100', format: 'json', origin: '*' })
+  const response = await fetch(`https://commons.wikimedia.org/w/api.php?${params}`)
+  if (!response.ok) return {}
+  const payload = await response.json() as { query?: { pages?: Record<string, { title: string; imageinfo?: Array<{ thumburl?: string; url?: string }> }> } }
+  const best = Object.values(payload.query?.pages ?? {})
+    .map((page) => {
+      const title = normalizeText(page.title)
+      const score = expectedTokens.filter((token) => title.includes(token)).length * 20
+        + (['front', 'rear', 'side', 'sedan', 'hatchback', 'coupe', 'suv'].some((token) => title.includes(token)) ? 8 : 0)
+        - (blockedTokens.some((token) => title.includes(token)) ? 100 : 0)
+      return { page, score, title }
+    })
+    .filter((candidate) => expectedTokens.every((token) => candidate.title.includes(token)) && candidate.score > 0)
+    .sort((a, b) => b.score - a.score)[0]?.page.imageinfo?.[0]
+  const image = best?.thumburl ?? best?.url
+  return image ? { image, imageLabel: 'Imagem de referência do modelo' } : {}
+}
+
 async function searchVehicles(query: string, year?: number): Promise<VehicleSearchResult[]> {
   const normalized = normalizeText(query)
   const tokens = normalized.split(' ').filter(Boolean)
   const requestedMake = makeAliases[tokens[0]] ?? tokens[0]
-  const catalogMatches = cars.filter((car) => {
+  const catalogMatches: VehicleSearchResult[] = cars.filter((car) => {
     const name = normalizeText(car.name)
     return tokens.every((token) => name.includes(token) || (makeAliases[token] && name.includes(makeAliases[token])))
   }).map((car) => {
@@ -77,12 +98,14 @@ async function searchVehicles(query: string, year?: number): Promise<VehicleSear
     const displayYear = year ?? photoYear
     return { id: `catalog-${normalizeText(car.name)}`, make, model: model.join(' '), year: displayYear, yearLabel: year ? String(year) : `Modelo ${photoYear}`, image: car.image, imageYearMatched: photoYear === year, imageLabel: photoYear === year ? `Foto verificada · ${year}` : `Foto verificada do modelo · ${photoYear}`, featured: car }
   })
-  const classicMatches = brazilianClassics.filter((car) => {
+  const classicMatches: VehicleSearchResult[] = brazilianClassics.filter((car) => {
     const name = normalizeText(`${car.make} ${car.model}`)
     return tokens.every((token) => name.includes(token) || (makeAliases[token] && name.includes(makeAliases[token]))) && (!year || (year >= car.from && year <= car.to))
   }).map((car) => ({ id: `classic-${normalizeText(`${car.make}-${car.model}`)}`, make: car.make, model: car.model, year: year ?? car.to, yearLabel: year ? String(year) : `${car.from}–${car.to}`, description: car.description }))
   const knownMakes = new Set(['audi', 'bmw', 'chevrolet', 'dodge', 'fiat', 'ford', 'honda', 'mercedes benz', 'nissan', 'porsche', 'tesla', 'toyota', 'volkswagen'])
-  if (!knownMakes.has(normalizeText(requestedMake))) return [...catalogMatches, ...classicMatches]
+  if (!knownMakes.has(normalizeText(requestedMake))) {
+    return Promise.all([...catalogMatches, ...classicMatches].map(async (vehicle) => vehicle.image ? vehicle : { ...vehicle, ...await findModelImage(vehicle.make, vehicle.model).catch(() => ({})) }))
+  }
   const endpoint = year && year > 1995 ? `https://vpic.nhtsa.dot.gov/api/vehicles/GetModelsForMakeYear/make/${encodeURIComponent(requestedMake)}/modelyear/${year}?format=json` : `https://vpic.nhtsa.dot.gov/api/vehicles/GetModelsForMake/${encodeURIComponent(requestedMake)}?format=json`
   const response = await fetch(endpoint)
   if (!response.ok) throw new Error('Não foi possível consultar a base de veículos.')
@@ -103,7 +126,9 @@ async function searchVehicles(query: string, year?: number): Promise<VehicleSear
     return { id: `${item.Make_ID}-${item.Model_ID}-${displayYear}`, make, model, year: displayYear, yearLabel: year ? String(year) : 'Todos os anos', image: known?.image, imageYearMatched: Boolean(known && featuredYears[normalizeText(known.name)] === year), imageLabel: known ? `Foto verificada · ${featuredYears[normalizeText(known.name)]}` : undefined, featured: known, description: 'Modelo confirmado no catálogo do fabricante. A imagem só aparece quando foi validada para este modelo.' }
   })
   const combined = [...catalogMatches, ...classicMatches, ...verified]
-  return combined.filter((item, index) => combined.findIndex((candidate) => normalizeText(`${candidate.make} ${candidate.model}`) === normalizeText(`${item.make} ${item.model}`)) === index).slice(0, 12)
+    .filter((item, index, values) => values.findIndex((candidate) => normalizeText(`${candidate.make} ${candidate.model}`) === normalizeText(`${item.make} ${item.model}`)) === index)
+    .slice(0, 12)
+  return Promise.all(combined.map(async (vehicle) => vehicle.image ? vehicle : { ...vehicle, ...await findModelImage(vehicle.make, vehicle.model).catch(() => ({})) }))
 }
 
 function Sidebar({ active, onChange, open, onClose }: { active: number; onChange: (index: number) => void; open: boolean; onClose: () => void }) {
