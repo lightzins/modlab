@@ -150,6 +150,32 @@ main { grid-column: 2; min-width: 0; min-height: 100vh; padding: 34px 34px 42px;
 .build-hero-copy { display: flex; flex-direction: column; justify-content: center; padding: 26px; }
 .build-hero-copy h2 { margin: 0 0 7px; font-size: 24px; }
 .build-hero-copy p { margin: 0; color: #a69d94; font-size: 10px; }
+.workshop-bay { position: relative; min-height: 370px; overflow: hidden; border: 1px solid rgba(215, 184, 134, .16); border-radius: 14px; background: #121313; box-shadow: 0 20px 40px rgba(0,0,0,.19); }
+.workshop-scene, .workshop-scene img, .workshop-vignette { position: absolute; inset: 0; width: 100%; height: 100%; }
+.workshop-scene { background: radial-gradient(circle at 63% 36%, rgba(214,178,111,.16), transparent 31%), linear-gradient(125deg, #171615 0%, #302a24 55%, #141414 100%); }
+.workshop-scene img { object-fit: cover; opacity: .9; filter: saturate(.78) contrast(1.06) brightness(.76); }
+.workshop-vignette { pointer-events: none; background: linear-gradient(90deg, rgba(10,11,11,.94) 0%, rgba(13,13,13,.48) 31%, rgba(10,11,11,.08) 64%, rgba(10,11,11,.54) 100%), linear-gradient(0deg, rgba(8,9,9,.65), transparent 45%); }
+.workshop-info { position: relative; z-index: 1; width: min(380px, 55%); padding: 30px; }
+.workshop-info h2 { margin: 0 0 7px; color: #f4eee7; font-size: 30px; letter-spacing: -.8px; }
+.workshop-info > p { margin: 0; color: #b9ada1; font-size: 10px; }
+.workshop-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; margin-top: 24px; }
+.workshop-stats span { padding: 9px; border: 1px solid rgba(255,255,255,.08); border-radius: 7px; background: rgba(17,17,17,.63); }
+.workshop-stats small, .workshop-stats b { display: block; }
+.workshop-stats small { margin-bottom: 4px; color: #998a79; font-size: 6px; letter-spacing: .65px; }
+.workshop-stats b { color: #ead5ae; font-size: 9px; }
+.workshop-info .progress-row { margin-top: 18px; }
+.workshop-controls { position: absolute; z-index: 1; right: 18px; bottom: 18px; display: flex; gap: 7px; }
+.workshop-controls .secondary-action { background: rgba(18,18,18,.72); backdrop-filter: blur(8px); }
+.garage-mode-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+.garage-mode { min-height: 84px; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 9px; padding: 11px; border: 1px solid rgba(255,255,255,.08); border-radius: 10px; color: #e9e2da; background: #292723; cursor: pointer; text-align: left; transition: border-color .18s ease, background .18s ease, transform .18s ease; }
+.garage-mode:hover { transform: translateY(-2px); border-color: rgba(211,184,134,.45); }
+.garage-mode.active { border-color: #d2b886; color: #1d1915; background: #d2b886; }
+.garage-mode > span { display: grid; place-items: center; width: 33px; height: 33px; border-radius: 8px; color: #d7ba84; background: #3d3831; }
+.garage-mode.active > span { color: #2d261f; background: rgba(255,255,255,.42); }
+.garage-mode strong, .garage-mode small { display: block; }
+.garage-mode strong { margin-bottom: 4px; font-size: 9px; }
+.garage-mode small { color: #a59b91; font-size: 6.5px; }
+.garage-mode.active small { color: #554837; }
 .progress-row { margin-top: 22px; }
 .progress-row > span { display: flex; justify-content: space-between; margin-bottom: 7px; color: #aaa199; font-size: 8px; }
 .progress-row > span b { color: #eadcc3; }
@@ -446,6 +472,9 @@ main { grid-column: 2; min-width: 0; min-height: 100vh; padding: 34px 34px 42px;
   .filter-pills { overflow-x: auto; padding-bottom: 2px; }
   .build-hero { grid-template-columns: 1fr; }
   .build-hero > img { height: 190px; }
+  .workshop-bay { min-height: 430px; }
+  .workshop-info { width: min(380px, 88%); padding: 24px; }
+  .garage-mode-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .tuning-layout { grid-template-columns: 1fr; }
   .tuning-chat { min-height: 360px; }
   .parts-grid, .settings-grid { grid-template-columns: 1fr; }
@@ -480,6 +509,13 @@ main { grid-column: 2; min-width: 0; min-height: 100vh; padding: 34px 34px 42px;
   .results-title { align-items: flex-start; flex-direction: column; padding-block: 12px; }
   .filter-pills button { flex: 0 0 auto; }
   .build-hero-copy { padding: 22px; }
+  .workshop-bay { min-height: 415px; }
+  .workshop-info { width: 100%; padding: 21px; }
+  .workshop-info h2 { font-size: 24px; }
+  .workshop-controls { right: 12px; bottom: 12px; }
+  .workshop-controls .secondary-action { padding: 7px 8px; font-size: 8px; }
+  .garage-mode { min-height: 76px; grid-template-columns: auto 1fr; }
+  .garage-mode > svg { display: none; }
   .tuning-chat header { align-items: flex-start; flex-wrap: wrap; }
   .connection-status { margin-left: 40px; }
   .section-title { align-items: flex-start; flex-direction: column; padding-block: 15px; }
