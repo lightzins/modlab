@@ -32,14 +32,24 @@ const cars: Car[] = [
   { name: "Ford Mustang ’69", spec: '320 cv • 0–100 km/h 5,6 s', price: 'R$ 680k', image: '/cars/mustang.jpg', category: 'Clássicos' },
 ]
 
-const garageCatalog = [
-  'Porsche 911 GT3', 'Audi RS Q8', 'BMW M5', 'Dodge Challenger', 'Tesla Model S Plaid', 'Ford Mustang 1969',
-  'Chevrolet Opala', 'Chevrolet Chevette', 'Toyota Corolla', 'Honda Civic Type R', 'Nissan GT-R', 'Mazda RX-7',
-  'Mitsubishi Lancer Evolution IX', 'Subaru Impreza WRX STI', 'Volkswagen Golf GTI', 'Volkswagen Polo GTI', 'Fiat Uno', 'Volkswagen Fusca',
-  'Chevrolet Camaro SS', 'Ford F-150 Raptor', 'Jeep Wrangler', 'Mercedes-Benz C63 AMG', 'Mercedes-Benz A45 AMG', 'BMW M3',
-  'BMW M4', 'Audi RS 3', 'Toyota GR Supra', 'Toyota GR Yaris', 'Nissan 370Z', 'Nissan Silvia S15',
-  'Honda NSX', 'Lexus IS F', 'Renault Clio RS', 'Peugeot 208 GTI', 'Volkswagen Jetta GLI', 'Volvo S60 Polestar',
-]
+const garageCatalog = ([
+  ['Chevrolet', ['Onix', 'Onix Plus', 'Tracker', 'Montana', 'Spin', 'S10', 'Trailblazer', 'Cruze', 'Corsa', 'Celta', 'Prisma', 'Classic', 'Astra', 'Vectra', 'Meriva', 'Opala']],
+  ['Fiat', ['Mobi', 'Argo', 'Cronos', 'Pulse', 'Fastback', 'Toro', 'Strada', 'Fiorino', 'Uno', 'Palio', 'Siena', 'Grand Siena', 'Punto', 'Bravo', 'Stilo', 'Doblò']],
+  ['Volkswagen', ['Polo', 'T-Cross', 'Nivus', 'Tera', 'Taos', 'Virtus', 'Jetta', 'Saveiro', 'Amarok', 'Golf', 'Gol', 'Fox', 'Voyage', 'Fusca', 'Kombi', 'Santana']],
+  ['Toyota', ['Corolla', 'Corolla Cross', 'Hilux', 'SW4', 'Yaris', 'Etios', 'RAV4', 'Camry', 'Prius', 'Fielder', 'Bandeirante', 'GR Corolla', 'GR Yaris', 'GR Supra', 'Land Cruiser', 'C-HR']],
+  ['Honda', ['Civic', 'City', 'City Hatch', 'HR-V', 'WR-V', 'CR-V', 'Fit', 'Accord', 'ZR-V', 'Jazz', 'Prelude', 'NSX', 'CRX', 'Passport', 'Pilot', 'Odyssey']],
+  ['Hyundai', ['HB20', 'HB20S', 'Creta', 'Tucson', 'Santa Fe', 'i30', 'ix35', 'Azera', 'Elantra', 'Veloster', 'Kona', 'Palisade', 'Sonata', 'Accent', 'Veracruz', 'H-1']],
+  ['Ford', ['Ka', 'Ka Sedan', 'Fiesta', 'Focus', 'EcoSport', 'Territory', 'Ranger', 'Maverick', 'Mustang', 'Bronco', 'Edge', 'Fusion', 'F-150', 'Courier', 'Escort', 'Belina']],
+  ['Renault', ['Kwid', 'Sandero', 'Logan', 'Duster', 'Oroch', 'Kardian', 'Captur', 'Megane', 'Scenic', 'Clio', 'Symbol', 'Fluence', 'Master', 'Kangoo', 'Twingo', '19']],
+  ['Nissan', ['Kicks', 'Versa', 'Sentra', 'Frontier', 'March', 'Livina', 'Tiida', 'X-Trail', 'Pathfinder', '370Z', 'GT-R', 'Silvia S15', 'Skyline', 'Leaf', 'Murano', 'Altima']],
+  ['Jeep', ['Renegade', 'Compass', 'Commander', 'Wrangler', 'Gladiator', 'Cherokee', 'Grand Cherokee', 'Wagoneer', 'CJ5', 'CJ7', 'Willys', 'Patriot', 'Liberty', 'Avenger', 'Comanche', 'Grand Wagoneer']],
+  ['Peugeot', ['208', '2008', '3008', '5008', '206', '207', '307', '308', '408', '405', '406', '106', '306', '404', 'Partner', 'Expert']],
+  ['Citroën', ['C3', 'C3 Aircross', 'C4 Cactus', 'Basalt', 'C4 Lounge', 'C4 Pallas', 'C3 Picasso', 'Xsara', 'C5', 'C6', 'ZX', 'AX', 'DS3', 'DS4', 'Berlingo', 'Jumper']],
+  ['BMW', ['118i', '120i', '125i', '128ti', '135i', '220i', '320i', '330i', '335i', '340i', '420i', '430i', 'M3', 'M4', 'X1', 'X3']],
+  ['Mercedes-Benz', ['A200', 'A250', 'A45 AMG', 'C180', 'C200', 'C300', 'C63 AMG', 'CLA200', 'CLA250', 'CLA45 AMG', 'E250', 'E350', 'E63 AMG', 'GLA200', 'GLC300', 'G63 AMG']],
+  ['Audi', ['A1', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'Q3', 'Q5', 'Q7', 'Q8', 'RS 3', 'RS 4', 'RS 5', 'RS 6', 'TT']],
+  ['Brasil e importados', ['BYD Song', 'BYD Dolphin', 'BYD Dolphin Mini', 'BYD King', 'BYD Shark', 'GWM Haval H6', 'GWM Haval H9', 'GWM Ora 03', 'Caoa Chery Tiggo 5X', 'Caoa Chery Tiggo 7', 'Caoa Chery Tiggo 8', 'RAM Rampage', 'RAM 1500', 'Kia Sportage', 'Mitsubishi Eclipse Cross', 'Subaru Impreza WRX STI']],
+] as Array<[string, string[]]>).flatMap(([make, models]) => models.map((model) => `${make} ${model}`))
 
 const buildParts = [
   { id: 'motor', name: 'Stage 2 ECU', detail: '+82 cv estimados', price: 'R$ 8.900', icon: Zap },
@@ -302,19 +312,31 @@ function DesignLab() {
   const [garageQuery, setGarageQuery] = useState('')
   const [searchingGarage, setSearchingGarage] = useState(false)
   const [vehicles, setVehicles] = useState(() => {
-    try { const stored = window.localStorage.getItem('modlab-showcase-catalog'); if (stored) return JSON.parse(stored) as Array<{ name: string; tag: string; power: string; grade: string; progress: string; image?: string }> } catch { /* Usa o catálogo curado abaixo. */ }
-    return garageCatalog.map((name, index) => { const featured = cars.find((car) => normalizeText(car.name) === normalizeText(name)); return { name, tag: featured ? `${featured.category} · projeto ${String(index + 1).padStart(2, '0')}` : `Catálogo curado · projeto ${String(index + 1).padStart(2, '0')}`, power: featured ? featured.spec.split(' • ')[0].replace(/[^0-9.]/g, '') : '—', grade: ['S+', 'A+', 'S', 'A', 'S+', 'A'][index % 6], progress: String([42, 28, 17, 12, 8, 5][index % 6]), image: featured?.image } })
+    type ShowcaseVehicle = { name: string; tag: string; power: string; grade: string; progress: string; image?: string }
+    const seed = garageCatalog.map((name, index): ShowcaseVehicle => { const featured = cars.find((car) => normalizeText(car.name) === normalizeText(name)); return { name, tag: featured ? `${featured.category} · projeto ${String(index + 1).padStart(2, '0')}` : `Catálogo curado · projeto ${String(index + 1).padStart(2, '0')}`, power: featured ? featured.spec.split(' • ')[0].replace(/[^0-9.]/g, '') : '—', grade: ['S+', 'A+', 'S', 'A', 'S+', 'A'][index % 6], progress: String([42, 28, 17, 12, 8, 5][index % 6]), image: featured?.image } })
+    try {
+      const stored = window.localStorage.getItem('modlab-showcase-catalog')
+      if (!stored) return seed
+      const existing = JSON.parse(stored) as ShowcaseVehicle[]
+      const merged = seed.map((item) => existing.find((saved) => normalizeText(saved.name) === normalizeText(item.name)) ?? item)
+      return [...merged, ...existing.filter((saved) => !merged.some((item) => normalizeText(item.name) === normalizeText(saved.name)))]
+    } catch { return seed }
   })
   useEffect(() => { window.localStorage.setItem('modlab-showcase-section', section); window.localStorage.setItem('modlab-showcase-selected', selected); window.localStorage.setItem('modlab-showcase-vehicle', String(vehicleIndex)); window.localStorage.setItem('modlab-showcase-steps', JSON.stringify(buildSteps)); window.localStorage.setItem('modlab-showcase-parts', JSON.stringify(savedParts)); window.localStorage.setItem('modlab-showcase-catalog', JSON.stringify(vehicles)) }, [section, selected, vehicleIndex, buildSteps, savedParts, vehicles])
   useEffect(() => {
     let cancelled = false
     const hydrateCatalogImages = async () => {
-      const missingImages = vehicles.filter((item) => !item.image).slice(0, 40)
-      for (const item of missingImages) {
-        const [make, ...model] = item.name.replace('1969', '').split(' ')
-        const image = await findModelImage(make, model.join(' ')).then((result) => result.image).catch(() => undefined)
-        if (cancelled || !image) continue
-        setVehicles((currentVehicles) => currentVehicles.map((candidate) => candidate.name === item.name ? { ...candidate, image } : candidate))
+      const missingImages = vehicles.filter((item) => !item.image).slice(0, 256)
+      for (let position = 0; position < missingImages.length; position += 4) {
+        const batch = missingImages.slice(position, position + 4)
+        const found = await Promise.all(batch.map(async (item) => {
+          const [make, ...model] = item.name.replace('1969', '').split(' ')
+          const image = await findModelImage(make, model.join(' ')).then((result) => result.image).catch(() => undefined)
+          return { name: item.name, image }
+        }))
+        if (cancelled) return
+        const images = new Map(found.filter((item): item is { name: string; image: string } => Boolean(item.image)) .map((item) => [item.name, item.image]))
+        if (images.size) setVehicles((currentVehicles) => currentVehicles.map((candidate) => images.has(candidate.name) ? { ...candidate, image: images.get(candidate.name) } : candidate))
       }
     }
     void hydrateCatalogImages()
