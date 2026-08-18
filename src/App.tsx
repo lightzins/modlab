@@ -151,7 +151,8 @@ async function findWikipediaBasePower(modelName: string): Promise<string | undef
     const cv = unit === 'kw' ? amount * 1.35962 : unit === 'hp' ? amount * 1.01387 : amount
     return cv >= 20 && cv <= 2_000 ? [Math.round(cv)] : []
   }))
-  return powers.length ? String(Math.min(...powers)) : undefined
+  const uniquePowers = [...new Set(powers)]
+  return uniquePowers.length === 1 ? String(uniquePowers[0]) : undefined
 }
 
 async function findBasePower(modelName: string): Promise<string | undefined> {
@@ -183,7 +184,8 @@ async function findBasePower(modelName: string): Promise<string | undefined> {
     const cv = unit.endsWith('/Q25236') ? amount / 735.49875 : amount
     return cv >= 20 && cv <= 2_000 ? [Math.round(cv)] : []
   })
-  return powers.length ? String(Math.min(...powers)) : findWikipediaBasePower(modelName).catch(() => undefined)
+  const uniquePowers = [...new Set(powers)]
+  return uniquePowers.length === 1 ? String(uniquePowers[0]) : findWikipediaBasePower(modelName).catch(() => undefined)
 }
 
 async function searchInternetVehicles(query: string, year?: number): Promise<VehicleSearchResult[]> {
@@ -391,16 +393,14 @@ function DesignLab() {
   const [savedParts, setSavedParts] = useState<string[]>(() => { try { const stored = window.localStorage.getItem('modlab-showcase-parts'); return stored ? JSON.parse(stored) as string[] : [] } catch { return [] } })
   const [configurationSaved, setConfigurationSaved] = useState(false)
   const [garageQuery, setGarageQuery] = useState('')
-  const [garageYear, setGarageYear] = useState('')
   const [searchingGarage, setSearchingGarage] = useState(false)
-  const [powerResearching, setPowerResearching] = useState(false)
   const [vehicles, setVehicles] = useState(() => {
     type ShowcaseVehicle = { name: string; tag: string; power: string; grade: string; progress: string; image?: string; imageYear?: number }
     const seed = garageCatalog.map((name, index): ShowcaseVehicle => { const featured = cars.find((car) => normalizeText(car.name) === normalizeText(name)); const imageYear = featured ? featuredYears[normalizeText(featured.name)] : undefined; return { name, tag: featured ? `${featured.category} · projeto ${String(index + 1).padStart(2, '0')}` : `Catálogo curado · projeto ${String(index + 1).padStart(2, '0')}`, power: featured ? featured.spec.split(' • ')[0].replace(/[^0-9.]/g, '') : '—', grade: ['S+', 'A+', 'S', 'A', 'S+', 'A'][index % 6], progress: String([42, 28, 17, 12, 8, 5][index % 6]), image: featured?.image, imageYear } })
     try {
       const stored = window.localStorage.getItem('modlab-showcase-catalog')
       if (!stored) return seed
-      const existing = JSON.parse(stored) as ShowcaseVehicle[]
+      const existing = (JSON.parse(stored) as ShowcaseVehicle[]).map((item) => item.tag.includes('potência base consultada') ? { ...item, power: '—', tag: item.tag.replace(' · potência base consultada', '') } : item)
       const merged = seed.map((item) => {
         const saved = existing.find((candidate) => normalizeText(candidate.name) === normalizeText(item.name))
         return saved ? { ...item, ...saved, imageYear: saved.imageYear ?? item.imageYear } : item
@@ -444,19 +444,7 @@ function DesignLab() {
   const current = options[section as keyof typeof options]
   const Icon = current.icon
   const vehicle = vehicles[vehicleIndex] ?? vehicles[0]
-  const selectVehicle = async (index: number) => {
-    setVehicleIndex(index)
-    setScreen('TUNING')
-    const candidate = vehicles[index]
-    if (!candidate || candidate.power !== '—') return
-    setPowerResearching(true)
-    try {
-      const power = await findBasePower(candidate.name).catch(() => undefined)
-      if (power) setVehicles((currentVehicles) => currentVehicles.map((item) => item.name === candidate.name ? { ...item, power, tag: `${item.tag} · potência base consultada` } : item))
-    } finally {
-      setPowerResearching(false)
-    }
-  }
+  const selectVehicle = (index: number) => { setVehicleIndex(index); setScreen('TUNING') }
   const marketParts = [{ name: 'Kit freios carbono', type: 'FREIOS · 410 MM', price: 'R$ 28.700', supplier: 'Apex Performance' }, { name: 'Coilover Clubsport', type: 'SUSPENSÃO · AJUSTÁVEL', price: 'R$ 12.400', supplier: 'Trackline Garage' }, { name: 'Escape valvulado', type: 'ESCAPE · TITÂNIO', price: 'R$ 18.200', supplier: 'Ferrovia Motorsport' }]
   const totalSaved = savedParts.reduce((sum, partName) => sum + Number(marketParts.find((part) => part.name === partName)?.price.replace(/[^0-9]/g, '') ?? 0), 0)
   const saveConfiguration = () => { setConfigurationSaved(true); window.setTimeout(() => setConfigurationSaved(false), 1800) }
@@ -466,9 +454,8 @@ function DesignLab() {
     if (!query) return
     setSearchingGarage(true)
     try {
-      const year = garageYear ? Number(garageYear) : undefined
-      const results = await searchVehicles(query, year)
-      const additions = results.map((result, index) => ({ name: `${result.make} ${result.model}`, tag: year ? `Busca pública · modelo ${year}` : 'Busca pública · adicionar ao projeto', power: '—', grade: 'B', progress: '0', image: result.image, imageYear: result.image ? year : undefined }))
+      const results = await searchVehicles(query)
+      const additions = results.map((result, index) => ({ name: `${result.make} ${result.model}`, tag: 'Busca pública · adicionar ao projeto', power: '—', grade: 'B', progress: '0', image: result.image, imageYear: undefined }))
       setVehicles((currentVehicles) => additions.reduce((nextVehicles, addition) => {
         const existingIndex = nextVehicles.findIndex((currentVehicle) => normalizeText(currentVehicle.name) === normalizeText(addition.name))
         if (existingIndex < 0) return [...nextVehicles, addition]
@@ -482,29 +469,27 @@ function DesignLab() {
   if (screen === 'GARAGEM' && garageQuery.trim()) return <section className="showcase-site" aria-label="Resultados de busca da garagem">
     {renderShowcaseHeader()}
     <main className="showcase-search-page">
-      <header><span className="eyebrow">BUSCA DE VEÍCULOS</span><h1>Resultados para<br />“{garageQuery}”.</h1><p>{garageYear ? `Buscando a melhor foto de referência para o modelo ${garageYear}.` : 'Escolha um modelo para abrir sua personalização.'}</p></header>
+      <header><span className="eyebrow">BUSCA DE VEÍCULOS</span><h1>Resultados para<br />“{garageQuery}”.</h1><p>Escolha um modelo para abrir sua personalização.</p></header>
       <form className="collection-search" onSubmit={searchGarage}>
         <Search size={17} />
         <input value={garageQuery} onChange={(event) => setGarageQuery(event.target.value)} placeholder="Buscar modelo" aria-label="Buscar carro no catálogo" autoFocus />
-        <label className="garage-year-filter"><CalendarDays size={15} /><span>Ano</span><select value={garageYear} onChange={(event) => setGarageYear(event.target.value)} aria-label="Ano do modelo"><option value="">Todos os anos</option>{Array.from({ length: new Date().getFullYear() - 1959 }, (_, index) => new Date().getFullYear() - index).map((year) => <option value={year} key={year}>{year}</option>)}</select></label>
         <button type="submit" disabled={searchingGarage}>{searchingGarage ? 'Buscando...' : 'Buscar online'}</button>
       </form>
-      <div className="vertical-search-results">{visibleVehicles.length ? visibleVehicles.map((car) => { const index = vehicles.findIndex((item) => item.name === car.name); return <button key={car.name} onClick={() => selectVehicle(index)}>{car.image ? <img src={car.image} alt={car.name} /> : <span className="vertical-search-no-image"><ImageOff size={22} />{garageYear ? ` Sem foto validada para ${garageYear}` : ' Imagem em validação'}</span>}<span><small>MODELO {String(index + 1).padStart(3, '0')}</small><strong>{car.name}</strong><em>{car.power === '—' ? 'Potência base em pesquisa' : `${car.power} cv · Classe ${car.grade}`}</em></span><ChevronRight size={18} /></button> }) : <div className="empty-search"><Search size={28} /><strong>Nenhum modelo local encontrado.</strong><p>Use “Buscar online” para consultar bases públicas e adicionar o carro ao catálogo.</p></div>}</div>
+      <div className="vertical-search-results">{visibleVehicles.length ? visibleVehicles.map((car) => { const index = vehicles.findIndex((item) => item.name === car.name); return <button key={car.name} onClick={() => selectVehicle(index)}>{car.image ? <img src={car.image} alt={car.name} /> : <span className="vertical-search-no-image"><ImageOff size={22} /> Imagem em validação</span>}<span><small>MODELO {String(index + 1).padStart(3, '0')}</small><strong>{car.name}</strong><em>{car.power === '—' ? 'Informe versão para confirmar a potência' : `${car.power} cv · Classe ${car.grade}`}</em></span><ChevronRight size={18} /></button> }) : <div className="empty-search"><Search size={28} /><strong>Nenhum modelo local encontrado.</strong><p>Use “Buscar online” para consultar bases públicas e adicionar o carro ao catálogo.</p></div>}</div>
     </main>
-    <footer className="showcase-footer"><button onClick={() => { setGarageQuery(''); setGarageYear('') }}>Limpar busca e voltar à garagem</button><span><i /> {visibleVehicles.length} resultados</span></footer>
+    <footer className="showcase-footer"><button onClick={() => setGarageQuery('')}>Limpar busca e voltar à garagem</button><span><i /> {visibleVehicles.length} resultados</span></footer>
   </section>
   if (screen === 'TUNING') return <section className="showcase-site" aria-label="Oficina de personalização">{renderShowcaseHeader()}<main className="showcase-main"><div className="showcase-photo">{vehicle.image ? <img src={vehicle.image} alt={vehicle.name} /> : <div className="showcase-no-image"><ImageOff size={32} /> Imagem do modelo em validação</div>}<div className="showcase-light" /></div><section className="showcase-identity"><span className="eyebrow">GARAGEM 01 · BUILD ATIVA</span><h1>{vehicle.name}</h1><p>{vehicle.tag}</p><div className="showcase-stats"><article><small>POTÊNCIA</small><strong>{vehicle.power === '—' ? 'N/D' : <>{vehicle.power}<em> cv</em></>}</strong></article><article><small>CLASSE</small><strong>{vehicle.grade}</strong></article><article><small>BUILD</small><strong>{vehicle.progress}<em>%</em></strong></article></div><div className="showcase-meter"><span><b>ÍNDICE DE PREPARO</b><b>{vehicle.progress}%</b></span><i style={{ width: `${vehicle.progress}%` }} /></div></section><aside className="showcase-config"><header><span><Icon size={20} /></span><div><small>AJUSTE ATUAL</small><strong>{current.title}</strong></div></header><p>{current.description}</p><div>{current.items.map((item, index) => <button className={selected === item ? 'selected' : ''} key={item} onClick={() => setSelected(item)}><b>{String(index + 1).padStart(2, '0')}</b><span>{item}</span>{selected === item ? <Check size={15} /> : <Plus size={15} />}</button>)}</div><footer><span>SELECIONADO</span><strong>{selected}</strong><button onClick={saveConfiguration}>{configurationSaved ? <><Check size={13} /> Salvo</> : <><Save size={13} /> Salvar ajuste</>}</button></footer></aside></main><nav className="showcase-actions" aria-label="Categorias de personalização">{Object.entries(options).map(([name, option]) => { const ActionIcon = option.icon; return <button className={section === name ? 'active' : ''} key={name} onClick={() => { setSection(name); setSelected(option.items[0]) }}><span><ActionIcon size={21} /></span><strong>{name}</strong><small>{name === 'Performance' ? 'motor & transmissão' : name === 'Visual' ? 'estilo & acabamento' : name === 'Dinâmica' ? 'suspensão & grip' : 'planejamento guiado'}</small></button> })}</nav><footer className="showcase-footer"><span><b>SELECIONE UM MÓDULO</b> para editar sua build</span><span><i /> Dados incompletos nunca recebem potência estimada</span></footer></section>
   if (screen === 'GARAGEM') return <section className="showcase-site" aria-label="Garagem Modlab">
     {renderShowcaseHeader()}
     <main className="showcase-collection showcase-collection--catalog">
-      <header><span className="eyebrow">COLEÇÃO MODLAB</span><h1>Encontre o carro<br />da sua build.</h1><p>Informe modelo e ano para trazer somente imagens compatíveis com a versão escolhida.</p></header>
+      <header><span className="eyebrow">COLEÇÃO MODLAB</span><h1>Encontre o carro<br />da sua build.</h1><p>Selecione um modelo e abra sua personalização.</p></header>
       <form className="collection-search" onSubmit={searchGarage}>
         <Search size={17} />
         <input value={garageQuery} onChange={(event) => setGarageQuery(event.target.value)} placeholder="Buscar modelo: Opala, Civic, Corolla, GT-R..." aria-label="Buscar carro no catálogo" />
-        <label className="garage-year-filter"><CalendarDays size={15} /><span>Ano</span><select value={garageYear} onChange={(event) => setGarageYear(event.target.value)} aria-label="Ano do modelo"><option value="">Todos os anos</option>{Array.from({ length: new Date().getFullYear() - 1959 }, (_, index) => new Date().getFullYear() - index).map((year) => <option value={year} key={year}>{year}</option>)}</select></label>
         <button type="submit" disabled={searchingGarage}>{searchingGarage ? 'Buscando...' : 'Buscar modelo'}</button>
       </form>
-      <div className="collection-grid">{visibleVehicles.map((car) => { const index = vehicles.findIndex((item) => item.name === car.name); return <button className={vehicleIndex === index ? 'selected' : ''} key={car.name} onClick={() => selectVehicle(index)}>{car.image ? <img src={car.image} alt={car.name} /> : <span className="collection-image-loading"><ImageOff size={22} />{garageYear ? ` Buscando foto do modelo para ${garageYear}` : ' Buscando imagem do modelo'}</span>}<span><small>BUILD {String(index + 1).padStart(3, '0')}</small><strong>{car.name}</strong><em>{car.power === '—' ? 'Potência base em pesquisa' : `${car.power} cv · Classe ${car.grade}`}</em></span>{vehicleIndex === index && <i><Check size={15} /></i>}</button> })}</div>
+      <div className="collection-grid">{visibleVehicles.map((car) => { const index = vehicles.findIndex((item) => item.name === car.name); return <button className={vehicleIndex === index ? 'selected' : ''} key={car.name} onClick={() => selectVehicle(index)}>{car.image ? <img src={car.image} alt={car.name} /> : <span className="collection-image-loading"><ImageOff size={22} /> Buscando imagem do modelo</span>}<span><small>BUILD {String(index + 1).padStart(3, '0')}</small><strong>{car.name}</strong><em>{car.power === '—' ? 'Versão necessária para confirmar CV' : `${car.power} cv · Classe ${car.grade}`}</em></span>{vehicleIndex === index && <i><Check size={15} /></i>}</button> })}</div>
       <footer><span><b>{visibleVehicles.length}</b> modelos exibidos · role verticalmente para explorar</span><button onClick={() => setScreen('TUNING')}>Abrir personalização <ChevronRight size={15} /></button></footer>
     </main>
     <footer className="showcase-footer"><span><b>BETA LOCAL FUNCIONAL</b> catálogo persistido neste navegador</span><span><i /> Fotos por ano só aparecem após validação</span></footer>
