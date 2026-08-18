@@ -20,7 +20,7 @@ const navItems: NavItem[] = [
   { label: 'Etapas', title: 'Etapas', description: 'Organize o andamento da sua build.', icon: CheckSquare },
   { label: 'Orçamento', title: 'Orçamento', description: 'Planeje custos, peças e serviços.', icon: BadgeDollarSign },
   { label: 'Configurações', title: 'Configurações', description: 'Personalize sua experiência no Modlab.', icon: Settings },
-  { label: 'Design Lab', title: 'Design Lab', description: 'Teste a próxima interface operacional do Modlab.', icon: SlidersHorizontal },
+  { label: 'Testes', title: 'Testes', description: 'Protótipo da garagem de personalização do Modlab.', icon: SlidersHorizontal },
 ]
 
 const cars: Car[] = [
@@ -283,21 +283,17 @@ function SettingsPage() {
 }
 
 function DesignLab() {
-  const [view, setView] = useState('Visão operacional')
-  const [compact, setCompact] = useState(false)
-  const views = ['Visão operacional', 'Build ativa', 'Finanças']
-  const feed = view === 'Finanças'
-    ? [['Orçamento disponível', 'R$ 78.500', 'verde'], ['Peças em análise', '04 itens', 'rosa'], ['Cotação pendente', '02 fornecedores', 'neutro']]
-    : view === 'Build ativa'
-      ? [['Configuração', 'Stage 2 ECU', 'verde'], ['Validação', 'Compatibilidade pendente', 'rosa'], ['Próxima tarefa', 'Revisar freios', 'neutro']]
-      : [['Build ativa', 'Porsche 911 GT3', 'verde'], ['Próxima etapa', 'Planejar performance', 'rosa'], ['Atividade recente', 'Build atualizada agora', 'neutro']]
-  return <section className={`design-lab ${compact ? 'design-lab--compact' : ''}`}>
-    <header className="design-lab-top"><div><span className="eyebrow">AMBIENTE DE TESTE</span><h2>Workspace operacional</h2><p>Uma direção mais densa para o Modlab, pensada como ferramenta de projeto.</p></div><button className="secondary-action" onClick={() => setCompact((value) => !value)}><SlidersHorizontal size={15} /> {compact ? 'Modo espaçoso' : 'Modo compacto'}</button></header>
-    <div className="design-command"><span><Sparkles size={16} /> Projeto atual <b>GT3 Track Specification</b></span><div><i /> Tudo salvo localmente <button type="button" onClick={() => setView('Build ativa')}>Abrir build <ChevronRight size={14} /></button></div></div>
-    <nav className="design-tabs" aria-label="Visões do protótipo">{views.map((item) => <button key={item} className={view === item ? 'active' : ''} onClick={() => setView(item)}>{item}</button>)}</nav>
-    <div className="design-metrics"><article><span>PROGRESSO</span><strong>42%</strong><small>+12% nesta semana</small><i style={{ width: '42%' }} /></article><article><span>ORÇAMENTO</span><strong>R$ 56,2k</strong><small>de R$ 135k planejados</small><i style={{ width: '41%' }} /></article><article><span>STATUS TÉCNICO</span><strong>3 / 4</strong><small>módulos definidos</small><i style={{ width: '75%' }} /></article></div>
-    <div className="design-workspace"><section className="design-panel design-panel--main"><header><div><span className="eyebrow">CENTRO DE OPERAÇÃO</span><h3>{view}</h3></div><span className="design-live"><i /> Em edição</span></header><div className="design-feed">{feed.map(([label, value, tone]) => <button key={label} className="design-feed-row" onClick={() => setView(label === 'Orçamento disponível' ? 'Finanças' : 'Build ativa')}><span className={`design-feed-icon ${tone}`}>{tone === 'verde' ? <Gauge size={17} /> : tone === 'rosa' ? <Wrench size={17} /> : <CheckSquare size={17} />}</span><span><small>{label}</small><strong>{value}</strong></span><ChevronRight size={16} /></button>)}</div><footer><span>Dados demonstrativos para validar o layout.</span><button onClick={() => setView('Visão operacional')}>Voltar ao resumo</button></footer></section><aside className="design-panel design-panel--queue"><header><div><span className="eyebrow">FILA DE TRABALHO</span><h3>Próximas ações</h3></div><b>03</b></header><ol><li><span>01</span><div><strong>Definir meta de potência</strong><small>Necessário para o mapa de peças</small></div><button onClick={() => setView('Build ativa')}><ChevronRight size={15} /></button></li><li><span>02</span><div><strong>Solicitar duas cotações</strong><small>Freios e suspensão</small></div><button onClick={() => setView('Finanças')}><ChevronRight size={15} /></button></li><li><span>03</span><div><strong>Revisar briefing IA</strong><small>Aguardar conexão do beta</small></div><button onClick={() => setView('Build ativa')}><ChevronRight size={15} /></button></li></ol></aside></div>
-  </section>
+  const [section, setSection] = useState('Performance')
+  const [selected, setSelected] = useState('Stage 2 ECU')
+  const options = {
+    Performance: { icon: Gauge, title: 'Performance', description: 'Potência, resposta e confiabilidade do conjunto.', items: ['Stage 1 ECU', 'Stage 2 ECU', 'Turbo upgrade'] },
+    Visual: { icon: Sparkles, title: 'Visual', description: 'Rodas, acabamento e presença da build.', items: ['Rodas forjadas 19”', 'Pacote aerodinâmico', 'Livery discreta'] },
+    Dinâmica: { icon: SlidersHorizontal, title: 'Dinâmica', description: 'Altura, aderência e comportamento em curva.', items: ['Coilover ajustável', 'Barras estabilizadoras', 'Pneus semi-slick'] },
+    'Assistente IA': { icon: MessageCircle, title: 'Assistente IA', description: 'Planejamento técnico guiado para o beta.', items: ['Definir objetivo', 'Estimar orçamento', 'Validar compatibilidade'] },
+  }
+  const current = options[section as keyof typeof options]
+  const Icon = current.icon
+  return <section className="test-garage" aria-label="Protótipo da garagem Modlab"><header className="test-garage-head"><div><span className="eyebrow">MODLAB / AMBIENTE DE TESTE</span><h2>Garagem de personalização</h2></div><span><i /> Protótipo interativo</span></header><div className="test-garage-stage"><div className="test-garage-image"><img src="/cars/porsche.jpg" alt="Porsche 911 GT3 em exibição" /><div /></div><section className="test-car-data"><span className="eyebrow">BUILD 01 / ATIVA</span><h3>Porsche 911 GT3</h3><p>Track specification · 2024</p><dl><div><dt>POTÊNCIA</dt><dd>584 <small>cv</small></dd></div><div><dt>CLASSE</dt><dd>S+ <small>street</small></dd></div><div><dt>PROGRESSO</dt><dd>42<small>%</small></dd></div></dl></section><aside className="test-side-panel"><header><span className="test-panel-icon"><Icon size={21} /></span><div><small>MÓDULO SELECIONADO</small><strong>{current.title}</strong></div></header><p>{current.description}</p><div className="test-option-list">{current.items.map((item) => <button key={item} className={selected === item ? 'selected' : ''} onClick={() => setSelected(item)}><span>{selected === item ? <Check size={14} /> : <Plus size={14} />}</span>{item}</button>)}</div><footer><span>Selecionado</span><strong>{selected}</strong></footer></aside></div><nav className="test-garage-dock" aria-label="Módulos de personalização">{Object.entries(options).map(([name, option]) => { const DockIcon = option.icon; return <button key={name} className={section === name ? 'active' : ''} onClick={() => { setSection(name); setSelected(option.items[0]) }}><span><DockIcon size={22} /></span><strong>{name}</strong><small>{option.title === 'Performance' ? 'motor e resposta' : option.title === 'Visual' ? 'estilo e rodas' : option.title === 'Dinâmica' ? 'suspensão e grip' : 'planejamento'}</small></button> })}</nav><footer className="test-garage-footer"><span><b>CONTROLES DE TESTE</b> Use os módulos para trocar o painel de configuração.</span><span><i /> Dados demonstrativos · nenhuma alteração no projeto real</span></footer></section>
 }
 
 function AppContent({ active, projects, activeProjectName, onNavigate, onAddVehicle, onOpenProject }: { active: number; projects: GarageProject[]; activeProjectName?: string; onNavigate: (index: number) => void; onAddVehicle: (vehicle: VehicleSearchResult) => void; onOpenProject: (project: GarageProject) => void }) {
@@ -313,7 +309,7 @@ function AppContent({ active, projects, activeProjectName, onNavigate, onAddVehi
 }
 
 export default function App() {
-  const [active, setActive] = useState(0)
+  const [active, setActive] = useState(() => window.location.pathname === '/testes' ? 7 : 0)
   const [navOpen, setNavOpen] = useState(false)
   const [activeProjectName, setActiveProjectName] = useState<string>()
   const [projects, setProjects] = useState<GarageProject[]>(() => {
@@ -322,6 +318,16 @@ export default function App() {
   })
   const current = navItems[active]
   useEffect(() => { window.localStorage.setItem('modlab-projects-v2', JSON.stringify(projects)) }, [projects])
+  useEffect(() => {
+    const syncRoute = () => setActive(window.location.pathname === '/testes' ? 7 : 0)
+    window.addEventListener('popstate', syncRoute)
+    return () => window.removeEventListener('popstate', syncRoute)
+  }, [])
+  const navigate = (index: number) => {
+    setActive(index)
+    const path = index === 7 ? '/testes' : '/'
+    if (window.location.pathname !== path) window.history.pushState({}, '', path)
+  }
   const addVehicle = (vehicle: VehicleSearchResult) => {
     const vehicleName = `${vehicle.make} ${vehicle.model}`
     const projectName = `${vehicle.model} ${vehicle.year}`
@@ -329,8 +335,8 @@ export default function App() {
     const nextProject: GarageProject = { car, name: projectName, status: 'Novo projeto', progress: 5, updated: 'Agora' }
     setProjects((currentProjects) => currentProjects.some((project) => project.name === projectName && project.car.name === vehicleName) ? currentProjects : [nextProject, ...currentProjects])
     setActiveProjectName(projectName)
-    setActive(1)
+    navigate(1)
   }
-  const openProject = (project: GarageProject) => { setActiveProjectName(project.name); setActive(3) }
-  return <div className="app-shell"><Sidebar active={active} onChange={setActive} open={navOpen} onClose={() => setNavOpen(false)} />{navOpen && <button className="backdrop" onClick={() => setNavOpen(false)} aria-label="Fechar menu" />}<main><header className="page-header"><button className="menu-button" onClick={() => setNavOpen(true)} aria-label="Abrir menu"><Menu size={20} /></button><div><h1>{current.title}</h1>{active !== 1 && <p>{current.description}</p>}</div></header><AppContent active={active} projects={projects} activeProjectName={activeProjectName} onNavigate={setActive} onAddVehicle={addVehicle} onOpenProject={openProject} /></main></div>
+  const openProject = (project: GarageProject) => { setActiveProjectName(project.name); navigate(3) }
+  return <div className="app-shell"><Sidebar active={active} onChange={navigate} open={navOpen} onClose={() => setNavOpen(false)} />{navOpen && <button className="backdrop" onClick={() => setNavOpen(false)} aria-label="Fechar menu" />}<main><header className="page-header"><button className="menu-button" onClick={() => setNavOpen(true)} aria-label="Abrir menu"><Menu size={20} /></button><div><h1>{current.title}</h1>{active !== 1 && <p>{current.description}</p>}</div></header><AppContent active={active} projects={projects} activeProjectName={activeProjectName} onNavigate={navigate} onAddVehicle={addVehicle} onOpenProject={openProject} /></main></div>
 }
