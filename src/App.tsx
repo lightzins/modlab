@@ -3,7 +3,7 @@ import {
   BadgeDollarSign, Bell, CalendarDays, CarFront, Check, CheckSquare, ChevronRight,
   CircleDollarSign, Clock3, Database, Download, Eye, Gauge, GitBranch, Globe2, Grid2X2,
   ImageOff, Languages, LoaderCircle, LogOut, Menu, Moon, MoreHorizontal, Plus, Ruler, Save,
-  Search, Settings, SlidersHorizontal, Sparkles, Trash2, UserRound,
+  MessageCircle, Search, Send, Settings, ShieldCheck, SlidersHorizontal, Sparkles, Trash2, UserRound,
   Wrench, X, Zap,
 } from 'lucide-react'
 
@@ -11,12 +11,13 @@ type NavItem = { label: string; title: string; description: string; icon: Compon
 type Car = { name: string; spec: string; price: string; image: string; category: 'Esportivos' | 'SUVs' | 'Clássicos' | 'Elétricos' | 'Outros' }
 type VehicleSearchResult = { id: string; make: string; model: string; year: number; yearLabel?: string; image?: string; description?: string; imageYearMatched?: boolean; imageLabel?: string; featured?: Car }
 type GarageProject = { car: Car; name: string; status: string; progress: number; updated: string }
+type TuningMessage = { id: number; role: 'assistant' | 'user'; content: string }
 
 const navItems: NavItem[] = [
   { label: 'Visão geral', title: 'Visão geral', description: 'Sua garagem, projetos e próximos passos em um só lugar.', icon: Grid2X2 },
   { label: 'Minha Garagem', title: 'Minha Garagem', description: 'Seus carros e projetos salvos.', icon: CarFront },
   { label: 'Explorar carros', title: 'Explorar carros', description: 'Encontre o próximo carro para sua garagem.', icon: Search },
-  { label: 'Minha build', title: 'Minha build', description: 'Monte e acompanhe a configuração do seu projeto.', icon: Wrench },
+  { label: 'Tuning IA', title: 'Tuning IA', description: 'Defina seu briefing e planeje a configuração do projeto.', icon: Wrench },
   { label: 'Etapas', title: 'Etapas', description: 'Organize o andamento da sua build.', icon: CheckSquare },
   { label: 'Orçamento', title: 'Orçamento', description: 'Planeje custos, peças e serviços.', icon: BadgeDollarSign },
   { label: 'Configurações', title: 'Configurações', description: 'Personalize sua experiência no Build Lab.', icon: Settings },
@@ -216,10 +217,24 @@ function ExploreCars({ onAddVehicle }: { onAddVehicle: (vehicle: VehicleSearchRe
 function MyBuild({ project }: { project?: GarageProject }) {
   const [selectedParts, setSelectedParts] = useState<string[]>(['motor'])
   const [saved, setSaved] = useState(false)
+  const [objective, setObjective] = useState('Rua com performance')
+  const [budget, setBudget] = useState('')
+  const [message, setMessage] = useState('')
+  const [messages, setMessages] = useState<TuningMessage[]>([
+    { id: 1, role: 'assistant', content: 'Me conte o objetivo da sua build, o uso do carro e a faixa de orçamento. Já deixo o briefing organizado para a análise técnica.' },
+  ])
   const togglePart = (id: string) => setSelectedParts((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])
   const progress = Math.min(25 + selectedParts.length * 15, 100)
+  const sendMessage = (event: FormEvent) => {
+    event.preventDefault()
+    const content = message.trim()
+    if (!content || !project) return
+    const id = Date.now()
+    setMessages((current) => [...current, { id, role: 'user', content }, { id: id + 1, role: 'assistant', content: `Briefing registrado para ${project.car.name}. A conexão com a IA ainda está em preparação; quando o Supabase e a chave do modelo estiverem configurados, vou devolver compatibilidade, etapas e estimativa para “${objective}”.` }])
+    setMessage('')
+  }
   if (!project) return <section className="content-page empty-tab"><Wrench size={30} strokeWidth={1.4} /><h2>Selecione um carro primeiro.</h2><p>Abra um projeto da sua garagem para configurar a build certa.</p></section>
-  return <section className="content-page build-page"><div className="build-hero">{project.car.image ? <img src={project.car.image} alt={project.car.name} /> : <div className="build-no-image"><ImageOff size={30} /><span>Imagem não validada</span></div>}<div className="build-hero-copy"><span className="eyebrow">PROJETO ATIVO</span><h2>{project.car.name}</h2><p>{project.name} · personalize as modificações para este carro.</p><div className="progress-row"><span><b>{progress}%</b> planejado</span><div><i style={{ width: `${progress}%` }} /></div></div></div></div>{saved && <div className="success-note"><Check size={15} /> Build salva com sucesso.</div>}<div className="section-title"><div><h2>Componentes da build</h2><p>Selecione as modificações para {project.car.name}.</p></div><button className="primary-action" onClick={() => { setSaved(true); window.setTimeout(() => setSaved(false), 2400) }}><Save size={15} /> Salvar build</button></div><div className="parts-grid">{buildParts.map((part) => { const Icon = part.icon; const selected = selectedParts.includes(part.id); return <button className={`part-card ${selected ? 'selected' : ''}`} key={part.id} onClick={() => togglePart(part.id)}><span className="part-icon"><Icon size={20} /></span><span><strong>{part.name}</strong><small>{part.detail}</small></span><b>{part.price}</b><i>{selected ? <Check size={14} /> : <Plus size={14} />}</i></button> })}</div></section>
+  return <section className="content-page build-page"><div className="build-hero">{project.car.image ? <img src={project.car.image} alt={project.car.name} /> : <div className="build-no-image"><ImageOff size={30} /><span>Imagem não validada</span></div>}<div className="build-hero-copy"><span className="eyebrow">PROJETO ATIVO</span><h2>{project.car.name}</h2><p>{project.name} · o briefing será sempre vinculado a este carro.</p><div className="progress-row"><span><b>{progress}%</b> planejado</span><div><i style={{ width: `${progress}%` }} /></div></div></div></div><div className="tuning-layout"><section className="tuning-chat"><header><span className="tuning-chat-icon"><MessageCircle size={18} /></span><div><strong>Assistente de Tuning</strong><small>Briefing técnico do projeto</small></div><span className="connection-status"><i /> Preparando conexão</span></header><div className="tuning-messages" aria-live="polite">{messages.map((item) => <div className={`tuning-message ${item.role}`} key={item.id}><span>{item.role === 'assistant' ? 'BL' : 'Você'}</span><p>{item.content}</p></div>)}</div><form className="tuning-composer" onSubmit={sendMessage}><input value={message} onChange={(event) => setMessage(event.target.value)} placeholder="Ex.: quero 300 cv confiáveis para uso diário" aria-label="Mensagem para o assistente" /><button type="submit" aria-label="Enviar mensagem"><Send size={16} /></button></form></section><aside className="tuning-context"><div className="tuning-context-title"><div><span className="eyebrow">CONTEXTO DA IA</span><h2>Seu briefing</h2></div><ShieldCheck size={20} /></div><label><small>OBJETIVO</small><select value={objective} onChange={(event) => setObjective(event.target.value)}><option>Rua com performance</option><option>Track day</option><option>Arrancada</option><option>Restomod</option><option>Off-road</option></select></label><label><small>ORÇAMENTO ESTIMADO</small><input value={budget} onChange={(event) => setBudget(event.target.value)} placeholder="Ex.: R$ 25.000" /></label><div className="tuning-vehicle"><small>VEÍCULO VINCULADO</small><strong>{project.car.name}</strong><span>{project.car.spec}</span></div><p className="tuning-disclaimer">O chat já registra seu briefing localmente nesta sessão. A análise por IA será ativada pela função segura do Supabase, sem expor a chave do modelo no navegador.</p></aside></div>{saved && <div className="success-note"><Check size={15} /> Build salva com sucesso.</div>}<div className="section-title"><div><h2>Componentes de referência</h2><p>Marque itens iniciais; a IA vai validar compatibilidade após a conexão.</p></div><button className="primary-action" onClick={() => { setSaved(true); window.setTimeout(() => setSaved(false), 2400) }}><Save size={15} /> Salvar briefing</button></div><div className="parts-grid">{buildParts.map((part) => { const Icon = part.icon; const selected = selectedParts.includes(part.id); return <button className={`part-card ${selected ? 'selected' : ''}`} key={part.id} onClick={() => togglePart(part.id)}><span className="part-icon"><Icon size={20} /></span><span><strong>{part.name}</strong><small>{part.detail}</small></span><b>{part.price}</b><i>{selected ? <Check size={14} /> : <Plus size={14} />}</i></button> })}</div></section>
 }
 
 function Stages() {

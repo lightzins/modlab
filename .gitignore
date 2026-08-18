@@ -3,3 +3,4 @@ node_modules_incomplete/
 dist/
 *.tsbuildinfo
 .tools/
+backups/
