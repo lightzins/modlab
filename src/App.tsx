@@ -20,6 +20,7 @@ const navItems: NavItem[] = [
   { label: 'Etapas', title: 'Etapas', description: 'Organize o andamento da sua build.', icon: CheckSquare },
   { label: 'Orçamento', title: 'Orçamento', description: 'Planeje custos, peças e serviços.', icon: BadgeDollarSign },
   { label: 'Configurações', title: 'Configurações', description: 'Personalize sua experiência no Modlab.', icon: Settings },
+  { label: 'Design Lab', title: 'Design Lab', description: 'Teste a próxima interface operacional do Modlab.', icon: SlidersHorizontal },
 ]
 
 const cars: Car[] = [
@@ -281,6 +282,24 @@ function SettingsPage() {
   </section>
 }
 
+function DesignLab() {
+  const [view, setView] = useState('Visão operacional')
+  const [compact, setCompact] = useState(false)
+  const views = ['Visão operacional', 'Build ativa', 'Finanças']
+  const feed = view === 'Finanças'
+    ? [['Orçamento disponível', 'R$ 78.500', 'verde'], ['Peças em análise', '04 itens', 'rosa'], ['Cotação pendente', '02 fornecedores', 'neutro']]
+    : view === 'Build ativa'
+      ? [['Configuração', 'Stage 2 ECU', 'verde'], ['Validação', 'Compatibilidade pendente', 'rosa'], ['Próxima tarefa', 'Revisar freios', 'neutro']]
+      : [['Build ativa', 'Porsche 911 GT3', 'verde'], ['Próxima etapa', 'Planejar performance', 'rosa'], ['Atividade recente', 'Build atualizada agora', 'neutro']]
+  return <section className={`design-lab ${compact ? 'design-lab--compact' : ''}`}>
+    <header className="design-lab-top"><div><span className="eyebrow">AMBIENTE DE TESTE</span><h2>Workspace operacional</h2><p>Uma direção mais densa para o Modlab, pensada como ferramenta de projeto.</p></div><button className="secondary-action" onClick={() => setCompact((value) => !value)}><SlidersHorizontal size={15} /> {compact ? 'Modo espaçoso' : 'Modo compacto'}</button></header>
+    <div className="design-command"><span><Sparkles size={16} /> Projeto atual <b>GT3 Track Specification</b></span><div><i /> Tudo salvo localmente <button type="button" onClick={() => setView('Build ativa')}>Abrir build <ChevronRight size={14} /></button></div></div>
+    <nav className="design-tabs" aria-label="Visões do protótipo">{views.map((item) => <button key={item} className={view === item ? 'active' : ''} onClick={() => setView(item)}>{item}</button>)}</nav>
+    <div className="design-metrics"><article><span>PROGRESSO</span><strong>42%</strong><small>+12% nesta semana</small><i style={{ width: '42%' }} /></article><article><span>ORÇAMENTO</span><strong>R$ 56,2k</strong><small>de R$ 135k planejados</small><i style={{ width: '41%' }} /></article><article><span>STATUS TÉCNICO</span><strong>3 / 4</strong><small>módulos definidos</small><i style={{ width: '75%' }} /></article></div>
+    <div className="design-workspace"><section className="design-panel design-panel--main"><header><div><span className="eyebrow">CENTRO DE OPERAÇÃO</span><h3>{view}</h3></div><span className="design-live"><i /> Em edição</span></header><div className="design-feed">{feed.map(([label, value, tone]) => <button key={label} className="design-feed-row" onClick={() => setView(label === 'Orçamento disponível' ? 'Finanças' : 'Build ativa')}><span className={`design-feed-icon ${tone}`}>{tone === 'verde' ? <Gauge size={17} /> : tone === 'rosa' ? <Wrench size={17} /> : <CheckSquare size={17} />}</span><span><small>{label}</small><strong>{value}</strong></span><ChevronRight size={16} /></button>)}</div><footer><span>Dados demonstrativos para validar o layout.</span><button onClick={() => setView('Visão operacional')}>Voltar ao resumo</button></footer></section><aside className="design-panel design-panel--queue"><header><div><span className="eyebrow">FILA DE TRABALHO</span><h3>Próximas ações</h3></div><b>03</b></header><ol><li><span>01</span><div><strong>Definir meta de potência</strong><small>Necessário para o mapa de peças</small></div><button onClick={() => setView('Build ativa')}><ChevronRight size={15} /></button></li><li><span>02</span><div><strong>Solicitar duas cotações</strong><small>Freios e suspensão</small></div><button onClick={() => setView('Finanças')}><ChevronRight size={15} /></button></li><li><span>03</span><div><strong>Revisar briefing IA</strong><small>Aguardar conexão do beta</small></div><button onClick={() => setView('Build ativa')}><ChevronRight size={15} /></button></li></ol></aside></div>
+  </section>
+}
+
 function AppContent({ active, projects, activeProjectName, onNavigate, onAddVehicle, onOpenProject }: { active: number; projects: GarageProject[]; activeProjectName?: string; onNavigate: (index: number) => void; onAddVehicle: (vehicle: VehicleSearchResult) => void; onOpenProject: (project: GarageProject) => void }) {
   const activeProject = projects.find((project) => project.name === activeProjectName)
   if (active === 0) return <Overview onBrowse={() => onNavigate(2)} />
@@ -289,7 +308,8 @@ function AppContent({ active, projects, activeProjectName, onNavigate, onAddVehi
   if (active === 3) return <MyBuild project={activeProject} />
   if (active === 4) return <Stages />
   if (active === 5) return <Budget />
-  return <SettingsPage />
+  if (active === 6) return <SettingsPage />
+  return <DesignLab />
 }
 
 export default function App() {
