@@ -90,9 +90,18 @@ async function searchInternetVehicles(query: string, year?: number): Promise<Veh
   const response = await fetch(`https://en.wikipedia.org/w/api.php?${params}`)
   if (!response.ok) return []
   const payload = await response.json() as { query?: { pages?: Record<string, { pageid: number; title: string; thumbnail?: { source?: string }; extract?: string }> } }
-  const compactQuery = normalizeText(query).replaceAll(' ', '')
+  const queryTokens = normalizeText(query).split(' ').filter(Boolean)
+  const knownAutomakers = ['acura', 'alfa romeo', 'audi', 'bmw', 'byd', 'cadillac', 'chevrolet', 'citroen', 'dodge', 'fiat', 'ford', 'honda', 'hyundai', 'jeep', 'kia', 'mazda', 'mercedes', 'mitsubishi', 'nissan', 'peugeot', 'porsche', 'renault', 'subaru', 'tesla', 'toyota', 'volkswagen', 'volvo']
   return Object.values(payload.query?.pages ?? {})
-    .filter((page) => normalizeText(page.title).replaceAll(' ', '').includes(compactQuery) || compactQuery.includes(normalizeText(page.title).replaceAll(' ', '')))
+    .filter((page) => {
+      const title = normalizeText(page.title)
+      const compactTitle = title.replaceAll(' ', '')
+      const text = normalizeText(`${page.title} ${page.extract ?? ''}`)
+      const matchesQuery = queryTokens.every((token) => compactTitle.includes(token))
+      const isAutomotive = /automobile|car|vehicle|manufacturer|hatchback|sedan|suv|motorsport|produced/.test(text)
+      const hasAutomaker = knownAutomakers.some((make) => title.includes(make))
+      return matchesQuery && isAutomotive && hasAutomaker
+    })
     .map((page) => {
       const title = page.title.replace(/\s*\([^)]*\)$/, '')
       const [make, ...model] = title.split(' ')
