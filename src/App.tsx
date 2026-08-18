@@ -467,14 +467,12 @@ function DesignLab() {
       }, currentVehicles))
     } finally { setSearchingGarage(false) }
   }
-  const visibleVehicles = vehicles
-    .filter((car) => normalizeText(car.name).includes(normalizeText(garageQuery)))
-    .map((car) => garageYear && car.imageYear !== Number(garageYear) ? { ...car, image: undefined } : car)
+  const visibleVehicles = vehicles.filter((car) => normalizeText(car.name).includes(normalizeText(garageQuery)))
   const renderShowcaseHeader = () => <><header className="showcase-header"><a className="showcase-brand" href="/"><img src="/modlab-logo.png" alt="Modlab" /><strong>MODLAB</strong></a><nav>{['GARAGEM', 'BUILD', 'TUNING', 'MERCADO'].map((item) => <button onClick={() => setScreen(item)} className={item === screen ? 'active' : ''} key={item}>{item}</button>)}</nav><div className="showcase-profile"><i /><span>BETA LOCAL</span></div></header><div className="showcase-subnav"><span>{screen === 'GARAGEM' ? 'GARAGEM / CATÁLOGO DE VEÍCULOS' : 'OFICINA / PERSONALIZAÇÃO'}</span><span>ALTERAÇÕES SALVAS NESTE DISPOSITIVO</span><button onClick={() => setVehicleIndex((index) => (index + 1) % vehicles.length)}><CarFront size={15} /> Trocar veículo</button></div></>
   if (screen === 'GARAGEM' && garageQuery.trim()) return <section className="showcase-site" aria-label="Resultados de busca da garagem">
     {renderShowcaseHeader()}
     <main className="showcase-search-page">
-      <header><span className="eyebrow">BUSCA DE VEÍCULOS</span><h1>Resultados para<br />“{garageQuery}”.</h1><p>{garageYear ? `Fotos exibidas somente quando validadas para o ano ${garageYear}.` : 'Escolha um modelo para abrir sua personalização.'}</p></header>
+      <header><span className="eyebrow">BUSCA DE VEÍCULOS</span><h1>Resultados para<br />“{garageQuery}”.</h1><p>{garageYear ? `Buscando a melhor foto de referência para o modelo ${garageYear}.` : 'Escolha um modelo para abrir sua personalização.'}</p></header>
       <form className="collection-search" onSubmit={searchGarage}>
         <Search size={17} />
         <input value={garageQuery} onChange={(event) => setGarageQuery(event.target.value)} placeholder="Buscar modelo" aria-label="Buscar carro no catálogo" autoFocus />
@@ -496,7 +494,7 @@ function DesignLab() {
         <label className="garage-year-filter"><CalendarDays size={15} /><span>Ano</span><select value={garageYear} onChange={(event) => setGarageYear(event.target.value)} aria-label="Ano do modelo"><option value="">Todos os anos</option>{Array.from({ length: new Date().getFullYear() - 1959 }, (_, index) => new Date().getFullYear() - index).map((year) => <option value={year} key={year}>{year}</option>)}</select></label>
         <button type="submit" disabled={searchingGarage}>{searchingGarage ? 'Buscando...' : 'Buscar modelo'}</button>
       </form>
-      <div className="collection-grid">{visibleVehicles.map((car) => { const index = vehicles.findIndex((item) => item.name === car.name); const canShowImage = Boolean(car.image && (!garageYear || car.imageYear === Number(garageYear))); return <button className={vehicleIndex === index ? 'selected' : ''} key={car.name} onClick={() => selectVehicle(index)}>{canShowImage ? <img src={car.image} alt={car.name} /> : <span className="collection-image-loading"><ImageOff size={22} />{garageYear ? ` Sem foto validada para ${garageYear}` : ' Buscando imagem do modelo'}</span>}<span><small>BUILD {String(index + 1).padStart(3, '0')}</small><strong>{car.name}</strong><em>{car.power === '—' ? 'Potência base em pesquisa' : `${car.power} cv · Classe ${car.grade}`}</em></span>{vehicleIndex === index && <i><Check size={15} /></i>}</button> })}</div>
+      <div className="collection-grid">{visibleVehicles.map((car) => { const index = vehicles.findIndex((item) => item.name === car.name); return <button className={vehicleIndex === index ? 'selected' : ''} key={car.name} onClick={() => selectVehicle(index)}>{car.image ? <img src={car.image} alt={car.name} /> : <span className="collection-image-loading"><ImageOff size={22} />{garageYear ? ` Buscando foto do modelo para ${garageYear}` : ' Buscando imagem do modelo'}</span>}<span><small>BUILD {String(index + 1).padStart(3, '0')}</small><strong>{car.name}</strong><em>{car.power === '—' ? 'Potência base em pesquisa' : `${car.power} cv · Classe ${car.grade}`}</em></span>{vehicleIndex === index && <i><Check size={15} /></i>}</button> })}</div>
       <footer><span><b>{visibleVehicles.length}</b> modelos exibidos · role verticalmente para explorar</span><button onClick={() => setScreen('TUNING')}>Abrir personalização <ChevronRight size={15} /></button></footer>
     </main>
     <footer className="showcase-footer"><span><b>BETA LOCAL FUNCIONAL</b> catálogo persistido neste navegador</span><span><i /> Fotos por ano só aparecem após validação</span></footer>
