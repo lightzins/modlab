@@ -512,6 +512,7 @@ function AppContent({ active, projects, activeProjectName, onNavigate, onAddVehi
 export default function App() {
   const isTestPath = () => window.location.pathname === '/teste' || window.location.pathname === '/testes'
   const [active, setActive] = useState(() => isTestPath() ? 7 : 0)
+  const [introVisible, setIntroVisible] = useState(true)
   const engineAudioRef = useRef<HTMLAudioElement>(null)
   const [navOpen, setNavOpen] = useState(false)
   const [activeProjectName, setActiveProjectName] = useState<string>()
@@ -523,16 +524,27 @@ export default function App() {
   useEffect(() => { window.localStorage.setItem('modlab-projects-v2', JSON.stringify(projects)) }, [projects])
   useEffect(() => {
     let started = false
+    let endTimer: number | undefined
     const startEngine = () => {
       const audio = engineAudioRef.current
       if (!audio || started) return
       audio.volume = .42
       audio.currentTime = 0
-      void audio.play().then(() => { started = true }).catch(() => undefined)
+      void audio.play().then(() => {
+        started = true
+        endTimer = window.setTimeout(() => {
+          audio.pause()
+          audio.currentTime = 0
+        }, 1_000)
+      }).catch(() => undefined)
     }
     startEngine()
     window.addEventListener('pointerdown', startEngine, { once: true })
-    return () => window.removeEventListener('pointerdown', startEngine)
+    return () => { window.removeEventListener('pointerdown', startEngine); if (endTimer) window.clearTimeout(endTimer) }
+  }, [])
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => setIntroVisible(false))
+    return () => window.cancelAnimationFrame(frame)
   }, [])
   useEffect(() => {
     const syncRoute = () => setActive(isTestPath() ? 7 : 0)
@@ -554,6 +566,7 @@ export default function App() {
     navigate(1)
   }
   const openProject = (project: GarageProject) => { setActiveProjectName(project.name); navigate(3) }
-  if (active === 7) return <><audio ref={engineAudioRef} src="/audio/s63-amg-v8-engine-revs.mp3" preload="auto" /><DesignLab /></>
-  return <><audio ref={engineAudioRef} src="/audio/s63-amg-v8-engine-revs.mp3" preload="auto" /><div className="app-shell"><Sidebar active={active} onChange={navigate} open={navOpen} onClose={() => setNavOpen(false)} />{navOpen && <button className="backdrop" onClick={() => setNavOpen(false)} aria-label="Fechar menu" />}<main><header className="page-header"><button className="menu-button" onClick={() => setNavOpen(true)} aria-label="Abrir menu"><Menu size={20} /></button><div><h1>{current.title}</h1>{active !== 1 && <p>{current.description}</p>}</div></header><AppContent active={active} projects={projects} activeProjectName={activeProjectName} onNavigate={navigate} onAddVehicle={addVehicle} onOpenProject={openProject} /></main></div></>
+  const introOverlay = <div className={introVisible ? 'site-intro' : 'site-intro site-intro--hidden'} aria-hidden="true" />
+  if (active === 7) return <><audio ref={engineAudioRef} src="/audio/vw-r32-v6.mp3" preload="auto" />{introOverlay}<DesignLab /></>
+  return <><audio ref={engineAudioRef} src="/audio/vw-r32-v6.mp3" preload="auto" />{introOverlay}<div className="app-shell"><Sidebar active={active} onChange={navigate} open={navOpen} onClose={() => setNavOpen(false)} />{navOpen && <button className="backdrop" onClick={() => setNavOpen(false)} aria-label="Fechar menu" />}<main><header className="page-header"><button className="menu-button" onClick={() => setNavOpen(true)} aria-label="Abrir menu"><Menu size={20} /></button><div><h1>{current.title}</h1>{active !== 1 && <p>{current.description}</p>}</div></header><AppContent active={active} projects={projects} activeProjectName={activeProjectName} onNavigate={navigate} onAddVehicle={addVehicle} onOpenProject={openProject} /></main></div></>
 }
