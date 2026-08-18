@@ -83,6 +83,61 @@ const brazilianClassics = [
 const normalizeText = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
 const displayName = (value: string) => value.toLowerCase().replace(/(^|[\s-])\S/g, (letter) => letter.toUpperCase())
 const displayMake = (value: string) => ({ bmw: 'BMW', gmc: 'GMC', mini: 'MINI', ram: 'RAM', fiat: 'FIAT' }[normalizeText(value)] ?? displayName(value))
+let lastEngineStartup = 0
+
+async function playBiturboV8Startup(): Promise<boolean> {
+  if (Date.now() - lastEngineStartup < 2_500) return true
+  const AudioContextClass = window.AudioContext ?? (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+  if (!AudioContextClass) return false
+  const context = new AudioContextClass()
+  try {
+    if (context.state !== 'running' && !navigator.userActivation?.isActive) { await context.close(); return false }
+    await context.resume()
+    if (context.state !== 'running') { await context.close(); return false }
+    lastEngineStartup = Date.now()
+    const now = context.currentTime
+    const master = context.createGain()
+    master.gain.setValueAtTime(.0001, now)
+    master.gain.exponentialRampToValueAtTime(.115, now + .08)
+    master.gain.exponentialRampToValueAtTime(.045, now + .85)
+    master.gain.exponentialRampToValueAtTime(.0001, now + 1.75)
+    master.connect(context.destination)
+    const buildCylinder = (detune: number, harmonic: number, gainValue: number) => {
+      const oscillator = context.createOscillator()
+      const gain = context.createGain()
+      oscillator.type = 'sawtooth'
+      oscillator.detune.value = detune
+      oscillator.frequency.setValueAtTime(31 * harmonic, now)
+      oscillator.frequency.exponentialRampToValueAtTime(57 * harmonic, now + .52)
+      oscillator.frequency.exponentialRampToValueAtTime(49 * harmonic, now + 1.6)
+      gain.gain.setValueAtTime(.0001, now)
+      gain.gain.exponentialRampToValueAtTime(gainValue, now + .06)
+      gain.gain.exponentialRampToValueAtTime(gainValue * .55, now + .75)
+      gain.gain.exponentialRampToValueAtTime(.0001, now + 1.7)
+      oscillator.connect(gain).connect(master)
+      oscillator.start(now)
+      oscillator.stop(now + 1.8)
+    }
+    ;[-12, -5, 4, 11].forEach((detune, index) => buildCylinder(detune, index % 2 ? 2 : 1, index % 2 ? .055 : .075))
+    const turbo = context.createOscillator()
+    const turboGain = context.createGain()
+    turbo.type = 'sine'
+    turbo.frequency.setValueAtTime(145, now + .12)
+    turbo.frequency.exponentialRampToValueAtTime(510, now + .72)
+    turbo.frequency.exponentialRampToValueAtTime(285, now + 1.55)
+    turboGain.gain.setValueAtTime(.0001, now)
+    turboGain.gain.exponentialRampToValueAtTime(.012, now + .28)
+    turboGain.gain.exponentialRampToValueAtTime(.0001, now + 1.7)
+    turbo.connect(turboGain).connect(master)
+    turbo.start(now)
+    turbo.stop(now + 1.8)
+    window.setTimeout(() => void context.close(), 2_100)
+    return true
+  } catch {
+    await context.close().catch(() => undefined)
+    return false
+  }
+}
 const removeDuplicateVehicleImages = <T extends { image?: string; imageYear?: number }>(items: T[]) => {
   const usedImages = new Set<string>()
   return items.map((item) => {
@@ -520,6 +575,15 @@ export default function App() {
   })
   const current = navItems[active]
   useEffect(() => { window.localStorage.setItem('modlab-projects-v2', JSON.stringify(projects)) }, [projects])
+  useEffect(() => {
+    let disposed = false
+    const tryStart = async () => {
+      const played = await playBiturboV8Startup()
+      if (!played && !disposed) window.addEventListener('pointerdown', tryStart, { once: true })
+    }
+    void tryStart()
+    return () => { disposed = true; window.removeEventListener('pointerdown', tryStart) }
+  }, [])
   useEffect(() => {
     const syncRoute = () => setActive(isTestPath() ? 7 : 0)
     window.addEventListener('popstate', syncRoute)
