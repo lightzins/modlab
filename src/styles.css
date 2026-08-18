@@ -7,8 +7,9 @@ button, input { font: inherit; }
 button { color: inherit; }
 .app-shell { min-height: 100vh; display: grid; grid-template-columns: 123px 1fr; }
 .sidebar { position: fixed; inset: 0 auto 0 0; z-index: 20; width: 123px; padding: 20px 12px; background: #3c3731; border-right: 1px solid rgba(255,255,255,.14); }
-.brand { margin-bottom: 13px; font-size: 12px; font-weight: 700; letter-spacing: -.2px; }
-.brand span { display: block; width: 27px; height: 2px; margin-top: 5px; background: #a49c92; }
+.brand { display: flex; align-items: center; gap: 8px; margin-bottom: 18px; color: #f1ebe4; font-size: 12px; font-weight: 800; letter-spacing: .6px; }
+.brand img { width: 38px; height: 38px; border-radius: 9px; object-fit: cover; object-position: center; }
+.brand strong { font: inherit; }
 .sidebar nav { display: grid; gap: 4px; }
 .nav-item { width: 100%; height: 32px; display: flex; align-items: center; gap: 9px; padding: 0 8px; border: 0; border-radius: 10px; color: #bdb6af; background: transparent; cursor: pointer; font-size: 9px; text-align: left; white-space: nowrap; }
 .nav-item:hover { background: rgba(255,255,255,.045); color: #fff; }
@@ -283,8 +284,8 @@ main { grid-column: 2; min-width: 0; min-height: 100vh; padding: 34px 34px 42px;
 @media (min-width: 1400px) {
   .app-shell { grid-template-columns: 220px 1fr; }
   .sidebar { width: 220px; padding: 28px 22px; }
-  .brand { margin-bottom: 18px; font-size: 15px; }
-  .brand span { width: 34px; margin-top: 7px; }
+  .brand { margin-bottom: 24px; font-size: 15px; }
+  .brand img { width: 46px; height: 46px; border-radius: 11px; }
   .sidebar nav { gap: 7px; }
   .nav-item { height: 42px; gap: 12px; padding-inline: 11px; border-radius: 11px; font-size: 13px; }
   .nav-item svg { width: 19px; height: 19px; }

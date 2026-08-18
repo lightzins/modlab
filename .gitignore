@@ -4,3 +4,9 @@ dist/
 *.tsbuildinfo
 .tools/
 backups/
+tmp_finance_artifacts/
+outputs/*
+!outputs/build-lab-finance/
+outputs/build-lab-finance/*
+!outputs/build-lab-finance/*.xlsx
+!outputs/build-lab-finance/*.pptx
