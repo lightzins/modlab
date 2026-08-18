@@ -83,6 +83,16 @@ const brazilianClassics = [
 const normalizeText = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
 const displayName = (value: string) => value.toLowerCase().replace(/(^|[\s-])\S/g, (letter) => letter.toUpperCase())
 const displayMake = (value: string) => ({ bmw: 'BMW', gmc: 'GMC', mini: 'MINI', ram: 'RAM', fiat: 'FIAT' }[normalizeText(value)] ?? displayName(value))
+const removeDuplicateVehicleImages = <T extends { image?: string; imageYear?: number }>(items: T[]) => {
+  const usedImages = new Set<string>()
+  return items.map((item) => {
+    if (!item.image || !usedImages.has(item.image)) {
+      if (item.image) usedImages.add(item.image)
+      return item
+    }
+    return { ...item, image: undefined, imageYear: undefined }
+  })
+}
 
 async function findWikipediaVehicleImage(make: string, model: string): Promise<Partial<Pick<VehicleSearchResult, 'image' | 'imageLabel'>>> {
   const modelTokens = normalizeText(model).split(' ').filter((token) => token.length > 1)
@@ -400,7 +410,7 @@ function DesignLab() {
         const imageYear = saved.imageYear ?? (featured ? featuredYears[normalizeText(featured.name)] : undefined)
         return { ...saved, image: saved.image ?? featured?.image, imageYear }
       })
-      return [...merged, ...extras]
+      return removeDuplicateVehicleImages([...merged, ...extras])
     } catch { return seed }
   })
   useEffect(() => { window.localStorage.setItem('modlab-showcase-section', section); window.localStorage.setItem('modlab-showcase-selected', selected); window.localStorage.setItem('modlab-showcase-vehicle', String(vehicleIndex)); window.localStorage.setItem('modlab-showcase-steps', JSON.stringify(buildSteps)); window.localStorage.setItem('modlab-showcase-parts', JSON.stringify(savedParts)); window.localStorage.setItem('modlab-showcase-catalog', JSON.stringify(vehicles)) }, [section, selected, vehicleIndex, buildSteps, savedParts, vehicles])
@@ -417,7 +427,7 @@ function DesignLab() {
         }))
         if (cancelled) return
         const images = new Map(found.filter((item): item is { name: string; image: string } => Boolean(item.image)) .map((item) => [item.name, item.image]))
-        if (images.size) setVehicles((currentVehicles) => currentVehicles.map((candidate) => images.has(candidate.name) ? { ...candidate, image: images.get(candidate.name) } : candidate))
+        if (images.size) setVehicles((currentVehicles) => removeDuplicateVehicleImages(currentVehicles.map((candidate) => images.has(candidate.name) ? { ...candidate, image: images.get(candidate.name) } : candidate)))
       }
     }
     void hydrateCatalogImages()
