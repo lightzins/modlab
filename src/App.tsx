@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState, type ComponentType, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type ComponentType, type FormEvent } from 'react'
 import {
   BadgeDollarSign, Bell, CalendarDays, CarFront, Check, CheckSquare, ChevronRight,
   CircleDollarSign, Clock3, Database, Eye, Gauge, Grid2X2,
   ImageOff, Languages, LoaderCircle, Menu, Moon, MoreHorizontal, Plus, Ruler, Save,
-  MessageCircle, Search, Settings, ShieldCheck, SlidersHorizontal, Sparkles,
+  MessageCircle, Search, Settings, ShieldCheck, SlidersHorizontal, Sparkles, Volume2, VolumeX,
   Wrench, X, Zap,
 } from 'lucide-react'
 
@@ -392,6 +392,8 @@ function DesignLab() {
   const [buildSteps, setBuildSteps] = useState<boolean[]>(() => { try { const stored = window.localStorage.getItem('modlab-showcase-steps'); return stored ? JSON.parse(stored) as boolean[] : [true, true, false, false] } catch { return [true, true, false, false] } })
   const [savedParts, setSavedParts] = useState<string[]>(() => { try { const stored = window.localStorage.getItem('modlab-showcase-parts'); return stored ? JSON.parse(stored) as string[] : [] } catch { return [] } })
   const [configurationSaved, setConfigurationSaved] = useState(false)
+  const engineAudioRef = useRef<HTMLAudioElement>(null)
+  const [engineSoundStatus, setEngineSoundStatus] = useState<'ready' | 'playing' | 'blocked'>('ready')
   const [garageQuery, setGarageQuery] = useState('')
   const [searchingGarage, setSearchingGarage] = useState(false)
   const [vehicles, setVehicles] = useState(() => {
@@ -435,6 +437,30 @@ function DesignLab() {
   // As imagens ausentes são carregadas uma vez e cacheadas no navegador.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+  const playEngineSound = async () => {
+    const audio = engineAudioRef.current
+    if (!audio) return
+    audio.pause()
+    audio.currentTime = 0
+    audio.volume = .42
+    try {
+      await audio.play()
+      setEngineSoundStatus('playing')
+    } catch {
+      setEngineSoundStatus('blocked')
+    }
+  }
+  const toggleEngineSound = () => {
+    const audio = engineAudioRef.current
+    if (!audio) return
+    if (!audio.paused) {
+      audio.pause()
+      setEngineSoundStatus('ready')
+      return
+    }
+    void playEngineSound()
+  }
+  useEffect(() => { void playEngineSound() }, [])
   const options = {
     Performance: { icon: Gauge, title: 'Performance', description: 'Potência, resposta e confiabilidade do conjunto.', items: ['Stage 1 ECU', 'Stage 2 ECU', 'Turbo upgrade'] },
     Visual: { icon: Sparkles, title: 'Visual', description: 'Rodas, acabamento e presença da build.', items: ['Rodas forjadas 19”', 'Pacote aerodinâmico', 'Livery discreta'] },
@@ -465,7 +491,7 @@ function DesignLab() {
     } finally { setSearchingGarage(false) }
   }
   const visibleVehicles = vehicles.filter((car) => normalizeText(car.name).includes(normalizeText(garageQuery)))
-  const renderShowcaseHeader = () => <><header className="showcase-header"><a className="showcase-brand" href="/"><img src="/modlab-logo.png" alt="Modlab" /><strong>MODLAB</strong></a><nav>{['GARAGEM', 'BUILD', 'TUNING', 'MERCADO'].map((item) => <button onClick={() => setScreen(item)} className={item === screen ? 'active' : ''} key={item}>{item}</button>)}</nav><div className="showcase-profile"><i /><span>BETA LOCAL</span></div></header><div className="showcase-subnav"><span>{screen === 'GARAGEM' ? 'GARAGEM / CATÁLOGO DE VEÍCULOS' : 'OFICINA / PERSONALIZAÇÃO'}</span><span>ALTERAÇÕES SALVAS NESTE DISPOSITIVO</span><button onClick={() => setVehicleIndex((index) => (index + 1) % vehicles.length)}><CarFront size={15} /> Trocar veículo</button></div></>
+  const renderShowcaseHeader = () => <><audio ref={engineAudioRef} src="/audio/s63-amg-v8-engine-revs.mp3" preload="auto" /><header className="showcase-header"><a className="showcase-brand" href="/"><img src="/modlab-logo.png" alt="Modlab" /><strong>MODLAB</strong></a><nav>{['GARAGEM', 'BUILD', 'TUNING', 'MERCADO'].map((item) => <button onClick={() => setScreen(item)} className={item === screen ? 'active' : ''} key={item}>{item}</button>)}</nav><div className="showcase-profile"><button type="button" onClick={toggleEngineSound} aria-label={engineSoundStatus === 'playing' ? 'Pausar ronco do motor' : 'Tocar ronco do motor'} title={engineSoundStatus === 'blocked' ? 'Toque para ativar o som' : 'Ronco Mercedes-AMG S63'}>{engineSoundStatus === 'playing' ? <Volume2 size={15} /> : <VolumeX size={15} />}</button><i /><span>{engineSoundStatus === 'blocked' ? 'TOQUE PARA ATIVAR' : 'BETA LOCAL'}</span></div></header><div className="showcase-subnav"><span>{screen === 'GARAGEM' ? 'GARAGEM / CATÁLOGO DE VEÍCULOS' : 'OFICINA / PERSONALIZAÇÃO'}</span><span>ALTERAÇÕES SALVAS NESTE DISPOSITIVO</span><button onClick={() => setVehicleIndex((index) => (index + 1) % vehicles.length)}><CarFront size={15} /> Trocar veículo</button></div></>
   if (screen === 'GARAGEM' && garageQuery.trim()) return <section className="showcase-site" aria-label="Resultados de busca da garagem">
     {renderShowcaseHeader()}
     <main className="showcase-search-page">
