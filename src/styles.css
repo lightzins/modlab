@@ -208,6 +208,10 @@ main { grid-column: 2; min-width: 0; min-height: 100vh; padding: 34px 34px 42px;
 .connection-status { display: inline-flex; align-items: center; gap: 5px; color: #c6b18d; font-size: 7px; white-space: nowrap; }
 .connection-status i { width: 6px; height: 6px; border-radius: 50%; background: #c7a875; box-shadow: 0 0 0 3px rgba(199,168,117,.14); }
 .tuning-messages { min-height: 0; flex: 1; display: flex; flex-direction: column; gap: 10px; padding: 14px; overflow-y: auto; }
+.tuning-empty { min-height: 270px; display: grid; place-content: center; justify-items: center; gap: 9px; padding: 28px; color: #a6a6a6; text-align: center; }
+.tuning-empty > svg { color: var(--ml-green, #00f5a0); }
+.tuning-empty strong { color: #f7f7f7; font-size: 11px; }
+.tuning-empty p { max-width: 290px; margin: 0; font-size: 8px; line-height: 1.65; }
 .tuning-message { display: flex; align-items: flex-start; gap: 7px; max-width: 92%; }
 .tuning-message > span { display: grid; place-items: center; width: 23px; height: 23px; flex: 0 0 auto; border-radius: 7px; color: #d5bd8f; background: #443c33; font-size: 6px; font-weight: 700; }
 .tuning-message p { margin: 0; padding: 9px 10px; border-radius: 9px 9px 9px 2px; color: #d7cfc6; background: #37322d; font-size: 8px; line-height: 1.55; }
