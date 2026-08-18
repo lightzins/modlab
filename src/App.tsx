@@ -85,6 +85,21 @@ async function findModelImage(make: string, model: string): Promise<Partial<Pick
   return image ? { image, imageLabel: 'Imagem de referência do modelo' } : {}
 }
 
+async function searchInternetVehicles(query: string, year?: number): Promise<VehicleSearchResult[]> {
+  const params = new URLSearchParams({ action: 'query', generator: 'search', gsrsearch: `${query} automobile`, gsrnamespace: '0', gsrlimit: '8', prop: 'pageimages|extracts', piprop: 'thumbnail', pithumbsize: '1100', exintro: '1', explaintext: '1', exsentences: '2', format: 'json', origin: '*' })
+  const response = await fetch(`https://en.wikipedia.org/w/api.php?${params}`)
+  if (!response.ok) return []
+  const payload = await response.json() as { query?: { pages?: Record<string, { pageid: number; title: string; thumbnail?: { source?: string }; extract?: string }> } }
+  const compactQuery = normalizeText(query).replaceAll(' ', '')
+  return Object.values(payload.query?.pages ?? {})
+    .filter((page) => normalizeText(page.title).replaceAll(' ', '').includes(compactQuery) || compactQuery.includes(normalizeText(page.title).replaceAll(' ', '')))
+    .map((page) => {
+      const title = page.title.replace(/\s*\([^)]*\)$/, '')
+      const [make, ...model] = title.split(' ')
+      return { id: `web-${page.pageid}`, make, model: model.join(' ') || title, year: year ?? new Date().getFullYear(), yearLabel: year ? String(year) : 'Todos os anos', image: page.thumbnail?.source, imageLabel: page.thumbnail?.source ? 'Imagem encontrada na internet' : undefined, description: page.extract || 'Modelo encontrado na base pública global.' }
+    })
+}
+
 async function searchVehicles(query: string, year?: number): Promise<VehicleSearchResult[]> {
   const normalized = normalizeText(query)
   const tokens = normalized.split(' ').filter(Boolean)
@@ -103,13 +118,10 @@ async function searchVehicles(query: string, year?: number): Promise<VehicleSear
     return tokens.every((token) => name.includes(token) || (makeAliases[token] && name.includes(makeAliases[token]))) && (!year || (year >= car.from && year <= car.to))
   }).map((car) => ({ id: `classic-${normalizeText(`${car.make}-${car.model}`)}`, make: car.make, model: car.model, year: year ?? car.to, yearLabel: year ? String(year) : `${car.from}–${car.to}`, description: car.description }))
   const knownMakes = new Set(['audi', 'bmw', 'chevrolet', 'dodge', 'fiat', 'ford', 'honda', 'mercedes benz', 'nissan', 'porsche', 'tesla', 'toyota', 'volkswagen'])
-  if (!knownMakes.has(normalizeText(requestedMake))) {
-    return Promise.all([...catalogMatches, ...classicMatches].map(async (vehicle) => vehicle.image ? vehicle : { ...vehicle, ...await findModelImage(vehicle.make, vehicle.model).catch(() => ({})) }))
-  }
   const endpoint = year && year > 1995 ? `https://vpic.nhtsa.dot.gov/api/vehicles/GetModelsForMakeYear/make/${encodeURIComponent(requestedMake)}/modelyear/${year}?format=json` : `https://vpic.nhtsa.dot.gov/api/vehicles/GetModelsForMake/${encodeURIComponent(requestedMake)}?format=json`
-  const response = await fetch(endpoint)
-  if (!response.ok) throw new Error('Não foi possível consultar a base de veículos.')
-  const payload = await response.json() as { Results?: Array<{ Make_ID: number; Make_Name: string; Model_ID: number; Model_Name: string }> }
+  const payload = knownMakes.has(normalizeText(requestedMake))
+    ? await fetch(endpoint).then(async (response) => response.ok ? response.json() as Promise<{ Results?: Array<{ Make_ID: number; Make_Name: string; Model_ID: number; Model_Name: string }> }> : { Results: [] }).catch(() => ({ Results: [] }))
+    : { Results: [] }
   const matches = (payload.Results ?? []).filter((item) => {
     const fullName = normalizeText(`${item.Make_Name} ${item.Model_Name}`)
     const comparableTokens = tokens[0] in makeAliases ? [makeAliases[tokens[0]], ...tokens.slice(1)] : tokens
@@ -125,7 +137,8 @@ async function searchVehicles(query: string, year?: number): Promise<VehicleSear
     const displayYear = year ?? featuredYears[normalizeText(known?.name ?? '')] ?? new Date().getFullYear()
     return { id: `${item.Make_ID}-${item.Model_ID}-${displayYear}`, make, model, year: displayYear, yearLabel: year ? String(year) : 'Todos os anos', image: known?.image, imageYearMatched: Boolean(known && featuredYears[normalizeText(known.name)] === year), imageLabel: known ? `Foto verificada · ${featuredYears[normalizeText(known.name)]}` : undefined, featured: known, description: 'Modelo confirmado no catálogo do fabricante. A imagem só aparece quando foi validada para este modelo.' }
   })
-  const combined = [...catalogMatches, ...classicMatches, ...verified]
+  const internetMatches = await searchInternetVehicles(query, year).catch(() => [])
+  const combined = [...catalogMatches, ...classicMatches, ...verified, ...internetMatches]
     .filter((item, index, values) => values.findIndex((candidate) => normalizeText(`${candidate.make} ${candidate.model}`) === normalizeText(`${item.make} ${item.model}`)) === index)
     .slice(0, 12)
   return Promise.all(combined.map(async (vehicle) => vehicle.image ? vehicle : { ...vehicle, ...await findModelImage(vehicle.make, vehicle.model).catch(() => ({})) }))
