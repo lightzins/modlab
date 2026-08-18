@@ -800,9 +800,17 @@ main { background: linear-gradient(135deg, #111 0%, #161616 54%, #111 100%); }
 .collection-search input::placeholder { color: #777; }
 .collection-search button { height: 30px; padding: 0 10px; border: 0; border-radius: 5px; color: #07150f; background: var(--ml-green); cursor: pointer; font-size: 8px; font-weight: 700; }
 .collection-search button:disabled { cursor: wait; opacity: .65; }
-.showcase-collection--catalog .collection-grid { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 12px; scroll-snap-type: x proximity; }
-.showcase-collection--catalog .collection-grid > button { flex: 0 0 clamp(228px, 25vw, 300px); min-height: 285px; scroll-snap-align: start; }
+.showcase-collection--catalog .collection-grid { display: grid; grid-template-columns: minmax(0, 900px); gap: 8px; overflow-x: hidden; padding-bottom: 12px; }
+.showcase-collection--catalog .collection-grid > button { width: 100%; min-height: 86px; display: grid; grid-template-columns: 132px 1fr; align-items: center; gap: 14px; padding: 0 16px 0 0; }
+.showcase-collection--catalog .collection-grid > button::after { display: none; }
+.showcase-collection--catalog .collection-grid > button > img { position: relative; width: 132px; height: 86px; filter: brightness(.74) saturate(.82); }
+.showcase-collection--catalog .collection-grid > button > span { position: relative; z-index: 1; }
+.showcase-collection--catalog .collection-grid > button strong { font-size: 12px; }
+.showcase-collection--catalog > footer > span { font-size: 0; }
+.showcase-collection--catalog > footer > span b { font-size: 9px; }
+.showcase-collection--catalog > footer > span::after { content: ' modelos exibidos · role verticalmente para explorar'; font-size: 9px; }
 .collection-image-loading { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 9px; color: #b4b4b4; background: radial-gradient(circle at 50% 35%, rgba(0,245,160,.08), transparent 38%), #1b1b1b; font-size: 8px; }
+.showcase-collection--catalog .collection-grid > button > .collection-image-loading { position: relative; width: 132px; height: 86px; }
 .showcase-collection--catalog .collection-grid > button > .collection-image-loading + span { position: relative; z-index: 1; }
 .showcase-search-page { min-height: calc(100vh - 143px); padding: clamp(27px, 5vw, 65px); background: radial-gradient(circle at 88% 3%, rgba(0,245,160,.11), transparent 25%), #111; }
 .showcase-search-page > header { margin-bottom: 20px; }
@@ -851,4 +859,4 @@ main { background: linear-gradient(135deg, #111 0%, #161616 54%, #111 100%); }
 .showcase-market article > button { display: inline-flex; align-items: center; gap: 5px; min-width: 68px; justify-content: center; padding: 8px; border: 1px solid rgba(247,247,247,.12); border-radius: 6px; color: #ddd; background: #151515; cursor: pointer; font-size: 7px; }
 .showcase-market article > button.saved { border-color: rgba(0,245,160,.42); color: #07150f; background: var(--ml-green); }
 @media (max-width: 760px) { .collection-grid { grid-template-columns: 1fr; } .collection-grid button { min-height: 190px; } .showcase-build { grid-template-columns: 1fr; } .showcase-build > aside { min-height: 240px; } }
-@media (max-width: 580px) { .showcase-collection, .showcase-build, .showcase-market { min-height: calc(100vh - 131px); padding: 24px 16px; } .collection-search { grid-template-columns: auto 1fr; } .collection-search button { grid-column: 1 / -1; } .showcase-collection--catalog .collection-grid > button { flex-basis: 245px; min-height: 250px; } .showcase-market article { grid-template-columns: auto 1fr auto; } .showcase-market article > strong { grid-column: 2; } .showcase-market article > button { grid-column: 3; grid-row: 1 / 3; } }
+@media (max-width: 580px) { .showcase-collection, .showcase-build, .showcase-market { min-height: calc(100vh - 131px); padding: 24px 16px; } .collection-search { grid-template-columns: auto 1fr; } .collection-search button { grid-column: 1 / -1; } .showcase-collection--catalog .collection-grid > button { min-height: 74px; grid-template-columns: 100px 1fr; } .showcase-collection--catalog .collection-grid > button > img, .showcase-collection--catalog .collection-grid > button > .collection-image-loading { width: 100px; height: 74px; } .showcase-market article { grid-template-columns: auto 1fr auto; } .showcase-market article > strong { grid-column: 2; } .showcase-market article > button { grid-column: 3; grid-row: 1 / 3; } }
