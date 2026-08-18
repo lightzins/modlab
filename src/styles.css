@@ -724,6 +724,7 @@ main { background: linear-gradient(135deg, #111 0%, #161616 54%, #111 100%); }
 .showcase-subnav span:nth-child(2) { margin-left: auto; }
 .showcase-subnav button { display: inline-flex; align-items: center; gap: 6px; padding: 5px 8px; border: 1px solid rgba(247,247,247,.12); border-radius: 5px; color: #e4e4e4; background: #202020; cursor: pointer; font-size: 7px; }
 .showcase-main { position: relative; min-height: calc(100vh - 246px); overflow: hidden; background: #161616; }
+.showcase-no-image { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 9px; color: #aaa; background: #1b1b1b; font-size: 9px; }
 .showcase-photo, .showcase-photo img, .showcase-light { position: absolute; inset: 0; width: 100%; height: 100%; }
 .showcase-photo img { object-fit: cover; object-position: center; filter: saturate(.8) contrast(1.1) brightness(.6); }
 .showcase-light { background: radial-gradient(circle at 72% 42%, rgba(255,0,110,.24), transparent 22%), radial-gradient(circle at 42% 68%, rgba(0,245,160,.15), transparent 31%), linear-gradient(90deg, rgba(7,7,7,.94) 0%, rgba(10,10,10,.45) 36%, rgba(10,10,10,.05) 67%, rgba(7,7,7,.72) 100%), linear-gradient(0deg, rgba(0,0,0,.7), transparent 46%); }
@@ -803,6 +804,24 @@ main { background: linear-gradient(135deg, #111 0%, #161616 54%, #111 100%); }
 .showcase-collection--catalog .collection-grid > button { flex: 0 0 clamp(228px, 25vw, 300px); min-height: 285px; scroll-snap-align: start; }
 .collection-image-loading { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 9px; color: #b4b4b4; background: radial-gradient(circle at 50% 35%, rgba(0,245,160,.08), transparent 38%), #1b1b1b; font-size: 8px; }
 .showcase-collection--catalog .collection-grid > button > .collection-image-loading + span { position: relative; z-index: 1; }
+.showcase-search-page { min-height: calc(100vh - 143px); padding: clamp(27px, 5vw, 65px); background: radial-gradient(circle at 88% 3%, rgba(0,245,160,.11), transparent 25%), #111; }
+.showcase-search-page > header { margin-bottom: 20px; }
+.showcase-search-page h1 { margin: 0 0 9px; color: #f7f7f7; font-size: clamp(30px, 4vw, 51px); line-height: .95; letter-spacing: -1.7px; }
+.showcase-search-page > header p { margin: 0; color: #a9a9a9; font-size: 10px; }
+.vertical-search-results { display: grid; gap: 7px; width: min(870px, 100%); }
+.vertical-search-results > button { min-height: 76px; display: grid; grid-template-columns: 105px 1fr auto; align-items: center; gap: 13px; overflow: hidden; padding: 0 13px 0 0; border: 1px solid rgba(247,247,247,.1); border-radius: 8px; color: #f7f7f7; background: #202020; cursor: pointer; text-align: left; }
+.vertical-search-results > button:hover { border-color: var(--ml-green); background: #252525; }
+.vertical-search-results img, .vertical-search-no-image { width: 105px; height: 76px; object-fit: cover; }
+.vertical-search-no-image { display: grid; place-content: center; justify-items: center; gap: 5px; color: #aaa; background: #181818; font-size: 6px; text-align: center; }
+.vertical-search-results small, .vertical-search-results strong, .vertical-search-results em { display: block; }
+.vertical-search-results small { margin-bottom: 5px; color: var(--ml-green); font-size: 6px; letter-spacing: .6px; }
+.vertical-search-results strong { margin-bottom: 4px; font-size: 11px; }
+.vertical-search-results em { color: #aaa; font-size: 7px; font-style: normal; }
+.vertical-search-results > button > svg { color: var(--ml-pink); }
+.empty-search { min-height: 200px; display: grid; place-content: center; justify-items: center; gap: 10px; border: 1px dashed rgba(247,247,247,.15); border-radius: 9px; color: #aaa; text-align: center; }
+.empty-search strong { color: #eee; font-size: 11px; }
+.empty-search p { max-width: 290px; margin: 0; font-size: 8px; line-height: 1.5; }
+.showcase-footer button { padding: 0; border: 0; color: var(--ml-green); background: none; cursor: pointer; font-size: 7px; }
 .showcase-build { min-height: calc(100vh - 143px); display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(260px, .6fr); gap: 13px; padding: clamp(26px, 5vw, 65px); background: radial-gradient(circle at 84% 12%, rgba(0,245,160,.1), transparent 24%), #111; }
 .showcase-build > section, .showcase-build > aside { padding: 20px; border: 1px solid rgba(247,247,247,.1); border-radius: 10px; background: #202020; }
 .showcase-build > section > header { margin-bottom: 19px; }
