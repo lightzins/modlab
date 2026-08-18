@@ -531,3 +531,72 @@ main { grid-column: 2; min-width: 0; min-height: 100vh; padding: 34px 34px 42px;
   .preference-list label { grid-template-columns: auto 1fr; }
   .preference-list select { grid-column: 2; width: 100%; }
 }
+
+/* Identidade Modlab: neon limpo sobre superfícies técnicas. */
+:root { --ml-green: #00f5a0; --ml-pink: #ff006e; --ml-black: #111111; --ml-surface: #2c2c2c; --ml-text: #f7f7f7; --ml-muted: #a6a6a6; color: var(--ml-text); background: var(--ml-black); }
+body { color: var(--ml-text); background: var(--ml-black); }
+body::before { content: ''; position: fixed; z-index: -1; inset: 0; pointer-events: none; background: radial-gradient(circle at 82% 8%, rgba(255,0,110,.12), transparent 24%), radial-gradient(circle at 16% 78%, rgba(0,245,160,.08), transparent 26%); }
+.sidebar { background: rgba(17,17,17,.96); border-right-color: rgba(247,247,247,.08); box-shadow: 10px 0 28px rgba(0,0,0,.14); }
+.brand { color: var(--ml-text); }
+.brand img { box-shadow: 0 0 0 1px rgba(0,245,160,.35), 0 8px 19px rgba(0,0,0,.45); }
+.nav-item { color: #a8a8a8; }
+.nav-item:hover { color: var(--ml-text); background: rgba(247,247,247,.055); }
+.nav-item.active { color: var(--ml-black); background: var(--ml-green); box-shadow: 0 7px 19px rgba(0,245,160,.18); }
+main { background: linear-gradient(135deg, #111 0%, #161616 54%, #111 100%); }
+.page-header p, .hero p, .garage-toolbar p, .wide-hero p, .results-title p, .section-title p, .settings-section-title p { color: var(--ml-muted); }
+.hero, .wide-hero { border: 1px solid rgba(247,247,247,.08); background: linear-gradient(115deg, #171717, #111); box-shadow: 0 18px 40px rgba(0,0,0,.25); }
+.hero h2, .wide-hero h2 { color: var(--ml-text); }
+.eyebrow, .project-category, .vehicle-source { color: var(--ml-green); }
+.wide-hero > svg { color: var(--ml-pink); }
+.search-box, .vehicle-query, .year-field, .tuning-composer input, .tuning-context input, .tuning-context select, .expense-form input, .preference-list select { color: var(--ml-text); background: #191919; border-color: rgba(247,247,247,.09); }
+.search-action, .primary-action { color: #081510; background: var(--ml-green); box-shadow: 0 8px 20px rgba(0,245,160,.18); }
+.search-action:hover, .primary-action:hover { filter: brightness(1.06); }
+.search-examples button, .filter-pills button, .secondary-action { border-color: rgba(247,247,247,.12); color: #d7d7d7; background: #222; }
+.search-examples button:hover, .filter-pills button.selected { border-color: var(--ml-pink); color: var(--ml-text); background: rgba(255,0,110,.16); }
+.car-card, .project-card, .vehicle-result-card, .part-card, .tuning-chat, .tuning-context, .metric-strip > div, .budget-summary article, .settings-card, .preference-list, .account-actions, .budget-panel { border-color: rgba(247,247,247,.07); background: var(--ml-surface); box-shadow: 0 12px 26px rgba(0,0,0,.17); }
+.car-card > img, .project-image, .vehicle-result-image { background: #171717; }
+.car-info p, .project-copy > p, .vehicle-description, .tuning-message p, .tuning-disclaimer { color: #b5b5b5; }
+.car-info button, .project-copy footer button, .vehicle-result-copy footer button, .settings-link { color: var(--ml-green); }
+.project-card.selected, .part-card.selected { border-color: var(--ml-green); box-shadow: 0 0 0 1px rgba(0,245,160,.12), 0 13px 28px rgba(0,0,0,.24); }
+.project-badge { color: var(--ml-text); background: rgba(17,17,17,.83); }
+.project-badge.complete, .part-card > i { color: #06130e; background: var(--ml-green); }
+.project-progress > div, .progress-row > div { background: #171717; }
+.project-progress i, .progress-row i { background: linear-gradient(90deg, var(--ml-green), #7fffd2); }
+.garage-hero { border: 1px solid rgba(255,0,110,.34); background: radial-gradient(circle at 78% 18%, rgba(255,0,110,.34), transparent 24%), linear-gradient(122deg, #181818 0%, #2c2c2c 64%, #151515 100%); box-shadow: 0 18px 42px rgba(0,0,0,.28); }
+.garage-hero h2, .garage-overview { color: var(--ml-text); }
+.garage-hero h2 span { border-bottom-color: var(--ml-pink); }
+.garage-overview small { color: var(--ml-green); background: rgba(0,245,160,.09); }
+.empty-garage, .empty-tab { border-color: rgba(0,245,160,.28); color: #c7c7c7; background: rgba(44,44,44,.72); }
+.empty-garage h3, .empty-tab h2 { color: var(--ml-text); }
+.vehicle-search-panel { background: #242424; box-shadow: 0 14px 28px rgba(0,0,0,.22); }
+.vehicle-query, .year-field { color: var(--ml-green); }
+.search-feedback.success { color: #03160e; background: var(--ml-green); }
+.search-feedback.error { color: #ffe4ef; background: rgba(255,0,110,.2); border: 1px solid rgba(255,0,110,.35); }
+.search-loading { color: var(--ml-green); background: rgba(44,44,44,.8); }
+.workshop-bay { border-color: rgba(0,245,160,.22); background: #111; box-shadow: 0 22px 48px rgba(0,0,0,.34); }
+.workshop-scene { background: radial-gradient(circle at 72% 32%, rgba(255,0,110,.2), transparent 30%), radial-gradient(circle at 41% 52%, rgba(0,245,160,.12), transparent 37%), #151515; }
+.workshop-vignette { background: linear-gradient(90deg, rgba(10,10,10,.94), rgba(17,17,17,.36) 51%, rgba(17,17,17,.2)), linear-gradient(0deg, rgba(0,0,0,.68), transparent 45%); }
+.workshop-info h2 { color: var(--ml-text); }
+.workshop-stats span { border-color: rgba(247,247,247,.1); background: rgba(17,17,17,.72); }
+.workshop-stats b { color: var(--ml-green); }
+.workshop-controls .secondary-action { border-color: rgba(247,247,247,.16); background: rgba(17,17,17,.82); }
+.garage-mode { border-color: rgba(247,247,247,.09); background: #2c2c2c; }
+.garage-mode:hover { border-color: var(--ml-pink); box-shadow: 0 10px 22px rgba(0,0,0,.2); }
+.garage-mode.active { color: #06130e; border-color: var(--ml-green); background: var(--ml-green); box-shadow: 0 10px 23px rgba(0,245,160,.17); }
+.garage-mode > span { color: var(--ml-pink); background: #171717; }
+.garage-mode.active > span { color: #06130e; background: rgba(255,255,255,.5); }
+.tuning-chat header { border-bottom-color: rgba(247,247,247,.08); }
+.tuning-chat-icon, .part-icon, .setting-icon { color: var(--ml-green); background: #1b1b1b; }
+.connection-status { color: var(--ml-green); }
+.connection-status i { background: var(--ml-green); box-shadow: 0 0 0 3px rgba(0,245,160,.13); }
+.tuning-message > span { color: var(--ml-black); background: var(--ml-green); }
+.tuning-message p { background: #212121; }
+.tuning-message.user > span, .tuning-message.user p, .tuning-composer button { color: #fff; background: var(--ml-pink); }
+.tuning-context, .tuning-vehicle { background: var(--ml-surface); }
+.tuning-context-title > svg { color: var(--ml-green); }
+.stage-row { border-color: rgba(247,247,247,.08); background: var(--ml-surface); }
+.stage-number { color: var(--ml-green); background: #171717; }
+.stage-row.done .stage-number { color: #06130e; background: var(--ml-green); }
+.account-actions button:hover { background: rgba(255,255,255,.035); }
+.toggle.on { background: var(--ml-green); }
+.toggle.on span { background: #111; }
