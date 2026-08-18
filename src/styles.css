@@ -756,6 +756,7 @@ main { background: linear-gradient(135deg, #111 0%, #161616 54%, #111 100%); }
 .showcase-config footer { display: grid; gap: 4px; padding: 10px 13px; border-top: 1px solid rgba(247,247,247,.08); background: rgba(0,0,0,.18); }
 .showcase-config footer span { color: #969696; font-size: 5.5px; font-weight: 700; letter-spacing: .7px; }
 .showcase-config footer strong { overflow: hidden; color: #f7f7f7; font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+.showcase-config footer button { display: inline-flex; align-items: center; justify-content: center; gap: 5px; margin-top: 4px; padding: 7px; border: 0; border-radius: 5px; color: #07150f; background: var(--ml-green); cursor: pointer; font-size: 7px; font-weight: 700; }
 .showcase-actions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid rgba(247,247,247,.1); background: #171717; }
 .showcase-actions button { min-height: 103px; display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; align-content: center; column-gap: 10px; row-gap: 4px; padding: 14px clamp(12px, 2vw, 26px); border: 0; border-right: 1px solid rgba(247,247,247,.08); color: #b0b0b0; background: transparent; cursor: pointer; text-align: left; }
 .showcase-actions button:last-child { border-right: 0; }
@@ -819,6 +820,6 @@ main { background: linear-gradient(135deg, #111 0%, #161616 54%, #111 100%); }
 .showcase-market article p { font-size: 7px; }
 .showcase-market article > strong { color: #f7f7f7; font-size: 10px; }
 .showcase-market article > button { display: inline-flex; align-items: center; gap: 5px; min-width: 68px; justify-content: center; padding: 8px; border: 1px solid rgba(247,247,247,.12); border-radius: 6px; color: #ddd; background: #151515; cursor: pointer; font-size: 7px; }
-.showcase-market article > button:has(svg) { }
+.showcase-market article > button.saved { border-color: rgba(0,245,160,.42); color: #07150f; background: var(--ml-green); }
 @media (max-width: 760px) { .collection-grid { grid-template-columns: 1fr; } .collection-grid button { min-height: 190px; } .showcase-build { grid-template-columns: 1fr; } .showcase-build > aside { min-height: 240px; } }
 @media (max-width: 580px) { .showcase-collection, .showcase-build, .showcase-market { min-height: calc(100vh - 131px); padding: 24px 16px; } .showcase-market article { grid-template-columns: auto 1fr auto; } .showcase-market article > strong { grid-column: 2; } .showcase-market article > button { grid-column: 3; grid-row: 1 / 3; } }
