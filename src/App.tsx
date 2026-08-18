@@ -105,6 +105,56 @@ async function findModelImage(make: string, model: string): Promise<Partial<Pick
   return image ? { image, imageLabel: 'Imagem de referência do modelo' } : {}
 }
 
+async function findWikipediaBasePower(modelName: string): Promise<string | undefined> {
+  const queryPage = async (language: 'pt' | 'en') => {
+    const params = new URLSearchParams({ action: 'query', titles: modelName, prop: 'revisions', rvprop: 'content', rvslots: 'main', format: 'json', origin: '*' })
+    const response = await fetch(`https://${language}.wikipedia.org/w/api.php?${params}`)
+    if (!response.ok) return ''
+    const payload = await response.json() as { query?: { pages?: Record<string, { revisions?: Array<{ slots?: { main?: Record<string, string> } }> }> } }
+    return Object.values(payload.query?.pages ?? {})[0]?.revisions?.[0]?.slots?.main?.['*'] ?? ''
+  }
+  const pages = await Promise.all([queryPage('pt'), queryPage('en')])
+  const powers = pages.flatMap((page) => Array.from(page.matchAll(/(?:converter\s*\|\s*|\b)(\d{2,4})\s*(cv|hp|ps|kw)\b/gi)).flatMap((match) => {
+    const amount = Number(match[1])
+    const unit = match[2].toLowerCase()
+    const cv = unit === 'kw' ? amount * 1.35962 : unit === 'hp' ? amount * 1.01387 : amount
+    return cv >= 20 && cv <= 2_000 ? [Math.round(cv)] : []
+  }))
+  return powers.length ? String(Math.min(...powers)) : undefined
+}
+
+async function findBasePower(modelName: string): Promise<string | undefined> {
+  const searchParams = new URLSearchParams({ action: 'wbsearchentities', search: modelName, language: 'en', limit: '6', format: 'json', origin: '*' })
+  const searchResponse = await fetch(`https://www.wikidata.org/w/api.php?${searchParams}`)
+  if (!searchResponse.ok) return findWikipediaBasePower(modelName).catch(() => undefined)
+  const search = await searchResponse.json() as { search?: Array<{ id: string; label?: string; description?: string }> }
+  const normalizedName = normalizeText(modelName)
+  const entity = (search.search ?? []).find((item) => normalizeText(item.label ?? '') === normalizedName)
+    ?? (search.search ?? []).find((item) => /car|automobile|vehicle|motor car/i.test(item.description ?? ''))
+  if (!entity) return findWikipediaBasePower(modelName).catch(() => undefined)
+
+  const claimsParams = new URLSearchParams({ action: 'wbgetentities', ids: entity.id, props: 'claims', format: 'json', origin: '*' })
+  const claimsResponse = await fetch(`https://www.wikidata.org/w/api.php?${claimsParams}`)
+  if (!claimsResponse.ok) return findWikipediaBasePower(modelName).catch(() => undefined)
+  const claims = await claimsResponse.json() as {
+    entities?: Record<string, {
+      claims?: Record<string, Array<{
+        mainsnak?: { datavalue?: { value?: { amount?: string; unit?: string } } }
+      }>>
+    }>
+  }
+  const values = claims.entities?.[entity.id]?.claims?.P2109 ?? []
+  const powers = values.flatMap((claim) => {
+    const value = claim.mainsnak?.datavalue?.value
+    const amount = Number(value?.amount)
+    if (!Number.isFinite(amount) || amount <= 0) return []
+    const unit = value?.unit ?? ''
+    const cv = unit.endsWith('/Q25236') ? amount / 735.49875 : amount
+    return cv >= 20 && cv <= 2_000 ? [Math.round(cv)] : []
+  })
+  return powers.length ? String(Math.min(...powers)) : findWikipediaBasePower(modelName).catch(() => undefined)
+}
+
 async function searchInternetVehicles(query: string, year?: number): Promise<VehicleSearchResult[]> {
   const params = new URLSearchParams({ action: 'query', generator: 'search', gsrsearch: `${query} automobile`, gsrnamespace: '0', gsrlimit: '8', prop: 'pageimages|extracts', piprop: 'thumbnail', pithumbsize: '1100', exintro: '1', explaintext: '1', exsentences: '2', format: 'json', origin: '*' })
   const response = await fetch(`https://en.wikipedia.org/w/api.php?${params}`)
@@ -311,6 +361,7 @@ function DesignLab() {
   const [configurationSaved, setConfigurationSaved] = useState(false)
   const [garageQuery, setGarageQuery] = useState('')
   const [searchingGarage, setSearchingGarage] = useState(false)
+  const [powerResearching, setPowerResearching] = useState(false)
   const [vehicles, setVehicles] = useState(() => {
     type ShowcaseVehicle = { name: string; tag: string; power: string; grade: string; progress: string; image?: string }
     const seed = garageCatalog.map((name, index): ShowcaseVehicle => { const featured = cars.find((car) => normalizeText(car.name) === normalizeText(name)); return { name, tag: featured ? `${featured.category} · projeto ${String(index + 1).padStart(2, '0')}` : `Catálogo curado · projeto ${String(index + 1).padStart(2, '0')}`, power: featured ? featured.spec.split(' • ')[0].replace(/[^0-9.]/g, '') : '—', grade: ['S+', 'A+', 'S', 'A', 'S+', 'A'][index % 6], progress: String([42, 28, 17, 12, 8, 5][index % 6]), image: featured?.image } })
@@ -353,7 +404,19 @@ function DesignLab() {
   const current = options[section as keyof typeof options]
   const Icon = current.icon
   const vehicle = vehicles[vehicleIndex] ?? vehicles[0]
-  const selectVehicle = (index: number) => { setVehicleIndex(index); setScreen('TUNING') }
+  const selectVehicle = async (index: number) => {
+    setVehicleIndex(index)
+    setScreen('TUNING')
+    const candidate = vehicles[index]
+    if (!candidate || candidate.power !== '—') return
+    setPowerResearching(true)
+    try {
+      const power = await findBasePower(candidate.name).catch(() => undefined)
+      if (power) setVehicles((currentVehicles) => currentVehicles.map((item) => item.name === candidate.name ? { ...item, power, tag: `${item.tag} · potência base consultada` } : item))
+    } finally {
+      setPowerResearching(false)
+    }
+  }
   const marketParts = [{ name: 'Kit freios carbono', type: 'FREIOS · 410 MM', price: 'R$ 28.700', supplier: 'Apex Performance' }, { name: 'Coilover Clubsport', type: 'SUSPENSÃO · AJUSTÁVEL', price: 'R$ 12.400', supplier: 'Trackline Garage' }, { name: 'Escape valvulado', type: 'ESCAPE · TITÂNIO', price: 'R$ 18.200', supplier: 'Ferrovia Motorsport' }]
   const totalSaved = savedParts.reduce((sum, partName) => sum + Number(marketParts.find((part) => part.name === partName)?.price.replace(/[^0-9]/g, '') ?? 0), 0)
   const saveConfiguration = () => { setConfigurationSaved(true); window.setTimeout(() => setConfigurationSaved(false), 1800) }
