@@ -84,12 +84,32 @@ const normalizeText = (value: string) => value.normalize('NFD').replace(/[\u0300
 const displayName = (value: string) => value.toLowerCase().replace(/(^|[\s-])\S/g, (letter) => letter.toUpperCase())
 const displayMake = (value: string) => ({ bmw: 'BMW', gmc: 'GMC', mini: 'MINI', ram: 'RAM', fiat: 'FIAT' }[normalizeText(value)] ?? displayName(value))
 
+async function findWikipediaVehicleImage(make: string, model: string): Promise<Partial<Pick<VehicleSearchResult, 'image' | 'imageLabel'>>> {
+  const modelTokens = normalizeText(model).split(' ').filter((token) => token.length > 1)
+  const params = new URLSearchParams({ action: 'query', generator: 'search', gsrsearch: `"${make} ${model}" automobile`, gsrnamespace: '0', gsrlimit: '8', prop: 'pageimages|pageprops', piprop: 'thumbnail', pithumbsize: '1100', format: 'json', origin: '*' })
+  const response = await fetch(`https://en.wikipedia.org/w/api.php?${params}`).catch(() => undefined)
+  if (!response?.ok) return {}
+  const payload = await response.json() as { query?: { pages?: Record<string, { title: string; thumbnail?: { source?: string }; pageprops?: { disambiguation?: string } }> } }
+  const candidate = Object.values(payload.query?.pages ?? {})
+    .filter((page) => page.thumbnail?.source && !page.pageprops?.disambiguation)
+    .map((page) => {
+      const title = normalizeText(page.title)
+      const compactTitle = title.replaceAll(' ', '')
+      const compactMake = normalizeText(make).replaceAll(' ', '')
+      const score = modelTokens.filter((token) => title.includes(token) || compactTitle.includes(token.replaceAll(' ', ''))).length * 20 + (title.includes(normalizeText(make)) || compactTitle.includes(compactMake) ? 8 : 0)
+      return { page, title, score }
+    })
+    .filter((item) => item.score >= 20)
+    .sort((a, b) => b.score - a.score)[0]?.page
+  return candidate?.thumbnail?.source ? { image: candidate.thumbnail.source, imageLabel: 'Imagem principal do artigo do modelo' } : {}
+}
+
 async function findModelImage(make: string, model: string, year?: number): Promise<Partial<Pick<VehicleSearchResult, 'image' | 'imageLabel'>>> {
   const expectedTokens = normalizeText(`${make} ${model}${year ? ` ${year}` : ''}`).split(' ').filter((token) => token.length > 1)
   const blockedTokens = ['interior', 'dashboard', 'engine', 'wheel', 'logo', 'badge', 'brochure', 'diagram', 'manual']
   const params = new URLSearchParams({ action: 'query', generator: 'search', gsrsearch: `"${make} ${model}"${year ? ` ${year}` : ''}`, gsrnamespace: '6', gsrlimit: '18', prop: 'imageinfo', iiprop: 'url', iiurlwidth: '1100', format: 'json', origin: '*' })
-  const response = await fetch(`https://commons.wikimedia.org/w/api.php?${params}`)
-  if (!response.ok) return {}
+  const response = await fetch(`https://commons.wikimedia.org/w/api.php?${params}`).catch(() => undefined)
+  if (!response?.ok) return year ? {} : findWikipediaVehicleImage(make, model)
   const payload = await response.json() as { query?: { pages?: Record<string, { title: string; imageinfo?: Array<{ thumburl?: string; url?: string }> }> } }
   const best = Object.values(payload.query?.pages ?? {})
     .map((page) => {
@@ -102,7 +122,8 @@ async function findModelImage(make: string, model: string, year?: number): Promi
     .filter((candidate) => expectedTokens.every((token) => candidate.title.includes(token)) && candidate.score > 0)
     .sort((a, b) => b.score - a.score)[0]?.page.imageinfo?.[0]
   const image = best?.thumburl ?? best?.url
-  return image ? { image, imageLabel: year ? `Imagem de referência do modelo · ${year}` : 'Imagem de referência do modelo' } : {}
+  if (image) return { image, imageLabel: year ? `Imagem de referência do modelo · ${year}` : 'Imagem de referência do modelo' }
+  return year ? {} : findWikipediaVehicleImage(make, model)
 }
 
 async function findWikipediaBasePower(modelName: string): Promise<string | undefined> {
@@ -387,8 +408,8 @@ function DesignLab() {
     let cancelled = false
     const hydrateCatalogImages = async () => {
       const missingImages = vehicles.filter((item) => !item.image).slice(0, 256)
-      for (let position = 0; position < missingImages.length; position += 4) {
-        const batch = missingImages.slice(position, position + 4)
+      for (let position = 0; position < missingImages.length; position += 8) {
+        const batch = missingImages.slice(position, position + 8)
         const found = await Promise.all(batch.map(async (item) => {
           const [make, ...model] = item.name.replace('1969', '').split(' ')
           const image = await findModelImage(make, model.join(' ')).then((result) => result.image).catch(() => undefined)
