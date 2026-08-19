@@ -514,6 +514,8 @@ export default function App() {
   const [active, setActive] = useState(() => isTestPath() ? 7 : 0)
   const [introVisible, setIntroVisible] = useState(true)
   const engineAudioRef = useRef<HTMLAudioElement>(null)
+  const engineAudioContextRef = useRef<AudioContext | null>(null)
+  const engineGainRef = useRef<GainNode | null>(null)
   const [navOpen, setNavOpen] = useState(false)
   const [activeProjectName, setActiveProjectName] = useState<string>()
   const [projects, setProjects] = useState<GarageProject[]>(() => {
@@ -525,22 +527,43 @@ export default function App() {
   useEffect(() => {
     let started = false
     let endTimer: number | undefined
-    const startEngine = () => {
+    const startEngine = async () => {
       const audio = engineAudioRef.current
       if (!audio || started) return
-      audio.volume = .72
-      audio.currentTime = 0
-      void audio.play().then(() => {
+      const AudioContextClass = window.AudioContext ?? (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+      if (!AudioContextClass) return
+      if (!engineAudioContextRef.current) {
+        const context = new AudioContextClass()
+        const gain = context.createGain()
+        context.createMediaElementSource(audio).connect(gain).connect(context.destination)
+        engineAudioContextRef.current = context
+        engineGainRef.current = gain
+      }
+      const context = engineAudioContextRef.current
+      const gain = engineGainRef.current
+      if (!context || !gain) return
+      try {
+        await context.resume()
+        audio.volume = 1
+        audio.currentTime = 0
+        gain.gain.cancelScheduledValues(context.currentTime)
+        gain.gain.setValueAtTime(.72, context.currentTime)
+        gain.gain.linearRampToValueAtTime(.0001, context.currentTime + 2)
+        await audio.play()
         started = true
         endTimer = window.setTimeout(() => {
           audio.pause()
           audio.currentTime = 0
         }, 2_000)
-      }).catch(() => undefined)
+      } catch { /* O primeiro toque poderá reiniciar a tentativa. */ }
     }
-    startEngine()
+    void startEngine()
     window.addEventListener('pointerdown', startEngine, { once: true })
-    return () => { window.removeEventListener('pointerdown', startEngine); if (endTimer) window.clearTimeout(endTimer) }
+    return () => {
+      window.removeEventListener('pointerdown', startEngine)
+      if (endTimer) window.clearTimeout(endTimer)
+      void engineAudioContextRef.current?.close()
+    }
   }, [])
   useEffect(() => {
     const revealTimer = window.setTimeout(() => setIntroVisible(false), 90)
