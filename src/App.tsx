@@ -528,14 +528,14 @@ export default function App() {
     const startEngine = () => {
       const audio = engineAudioRef.current
       if (!audio || started) return
-      audio.volume = .42
+      audio.volume = .72
       audio.currentTime = 0
       void audio.play().then(() => {
         started = true
         endTimer = window.setTimeout(() => {
           audio.pause()
           audio.currentTime = 0
-        }, 1_000)
+        }, 2_000)
       }).catch(() => undefined)
     }
     startEngine()
