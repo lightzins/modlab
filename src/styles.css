@@ -5,8 +5,17 @@
 body { margin: 0; min-width: 320px; min-height: 100vh; background: #837565; }
 button, input { font: inherit; }
 button { color: inherit; }
-.site-intro { position: fixed; z-index: 1000; inset: 0; pointer-events: none; background: #050505; opacity: 1; transition: opacity 1s cubic-bezier(.22, .61, .36, 1); }
-.site-intro--hidden { opacity: 0; }
+.site-intro { position: fixed; z-index: 1000; inset: 0; display: grid; place-items: center; padding: 24px; pointer-events: none; background: radial-gradient(circle at 50% 45%, #1b1b1b 0%, #080808 54%, #030303 100%); opacity: 1; transition: opacity .85s cubic-bezier(.22, .61, .36, 1), visibility .85s; }
+.site-intro--active { pointer-events: auto; }
+.site-intro--hidden { visibility: hidden; opacity: 0; }
+.site-intro__panel { width: min(360px, 100%); display: grid; justify-items: center; gap: 13px; color: #f7f7f7; text-align: center; }
+.site-intro__panel img { width: 58px; height: 58px; border-radius: 14px; object-fit: cover; box-shadow: 0 0 34px rgba(0,245,160,.18); }
+.site-intro__panel > span { color: var(--ml-green); font-size: 8px; font-weight: 700; letter-spacing: 1.4px; }
+.site-intro__panel h1 { margin: 5px 0 0; font-size: clamp(31px, 8vw, 48px); letter-spacing: -1.7px; }
+.site-intro__panel p { margin: -4px 0 8px; color: #9b9b9b; font-size: 11px; }
+.site-intro__panel button { min-width: 210px; display: inline-flex; justify-content: center; align-items: center; gap: 24px; padding: 14px 18px; border: 1px solid rgba(0,245,160,.7); border-radius: 7px; color: #06140e; background: var(--ml-green); box-shadow: 0 0 28px rgba(0,245,160,.2); cursor: pointer; font-size: 10px; font-weight: 800; }
+.site-intro__panel button:hover { background: #55ffc0; transform: translateY(-1px); }
+.site-intro__panel button span { font-size: 16px; line-height: 0; }
 .app-shell { min-height: 100vh; display: grid; grid-template-columns: 123px 1fr; }
 .sidebar { position: fixed; inset: 0 auto 0 0; z-index: 20; width: 123px; padding: 20px 12px; background: #3c3731; border-right: 1px solid rgba(255,255,255,.14); }
 .brand { display: flex; align-items: center; gap: 8px; margin-bottom: 18px; color: #f1ebe4; font-size: 12px; font-weight: 800; letter-spacing: .6px; }
