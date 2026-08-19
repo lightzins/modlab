@@ -512,10 +512,11 @@ function AppContent({ active, projects, activeProjectName, onNavigate, onAddVehi
 export default function App() {
   const isTestPath = () => window.location.pathname === '/teste' || window.location.pathname === '/testes'
   const [active, setActive] = useState(() => isTestPath() ? 7 : 0)
-  const [introVisible, setIntroVisible] = useState(true)
+  const [introEntered, setIntroEntered] = useState(false)
   const engineAudioRef = useRef<HTMLAudioElement>(null)
   const engineAudioContextRef = useRef<AudioContext | null>(null)
   const engineGainRef = useRef<GainNode | null>(null)
+  const engineEndTimerRef = useRef<number | null>(null)
   const [navOpen, setNavOpen] = useState(false)
   const [activeProjectName, setActiveProjectName] = useState<string>()
   const [projects, setProjects] = useState<GarageProject[]>(() => {
@@ -525,49 +526,10 @@ export default function App() {
   const current = navItems[active]
   useEffect(() => { window.localStorage.setItem('modlab-projects-v2', JSON.stringify(projects)) }, [projects])
   useEffect(() => {
-    let started = false
-    let endTimer: number | undefined
-    const startEngine = async () => {
-      const audio = engineAudioRef.current
-      if (!audio || started) return
-      const AudioContextClass = window.AudioContext ?? (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
-      if (!AudioContextClass) return
-      if (!engineAudioContextRef.current) {
-        const context = new AudioContextClass()
-        const gain = context.createGain()
-        context.createMediaElementSource(audio).connect(gain).connect(context.destination)
-        engineAudioContextRef.current = context
-        engineGainRef.current = gain
-      }
-      const context = engineAudioContextRef.current
-      const gain = engineGainRef.current
-      if (!context || !gain) return
-      try {
-        await context.resume()
-        audio.volume = 1
-        audio.currentTime = 0
-        gain.gain.cancelScheduledValues(context.currentTime)
-        gain.gain.setValueAtTime(.72, context.currentTime)
-        gain.gain.linearRampToValueAtTime(.0001, context.currentTime + 2)
-        await audio.play()
-        started = true
-        endTimer = window.setTimeout(() => {
-          audio.pause()
-          audio.currentTime = 0
-        }, 2_000)
-      } catch { /* O primeiro toque poderá reiniciar a tentativa. */ }
-    }
-    void startEngine()
-    window.addEventListener('pointerdown', startEngine, { once: true })
     return () => {
-      window.removeEventListener('pointerdown', startEngine)
-      if (endTimer) window.clearTimeout(endTimer)
+      if (engineEndTimerRef.current) window.clearTimeout(engineEndTimerRef.current)
       void engineAudioContextRef.current?.close()
     }
-  }, [])
-  useEffect(() => {
-    const revealTimer = window.setTimeout(() => setIntroVisible(false), 90)
-    return () => window.clearTimeout(revealTimer)
   }, [])
   useEffect(() => {
     const syncRoute = () => setActive(isTestPath() ? 7 : 0)
@@ -589,7 +551,34 @@ export default function App() {
     navigate(1)
   }
   const openProject = (project: GarageProject) => { setActiveProjectName(project.name); navigate(3) }
-  const introOverlay = <div className={introVisible ? 'site-intro' : 'site-intro site-intro--hidden'} aria-hidden="true" />
-  if (active === 7) return <><audio ref={engineAudioRef} src="/audio/s63-amg-v8-engine-revs.mp3" autoPlay playsInline preload="auto" />{introOverlay}<DesignLab /></>
-  return <><audio ref={engineAudioRef} src="/audio/s63-amg-v8-engine-revs.mp3" autoPlay playsInline preload="auto" />{introOverlay}<div className="app-shell"><Sidebar active={active} onChange={navigate} open={navOpen} onClose={() => setNavOpen(false)} />{navOpen && <button className="backdrop" onClick={() => setNavOpen(false)} aria-label="Fechar menu" />}<main><header className="page-header"><button className="menu-button" onClick={() => setNavOpen(true)} aria-label="Abrir menu"><Menu size={20} /></button><div><h1>{current.title}</h1>{active !== 1 && <p>{current.description}</p>}</div></header><AppContent active={active} projects={projects} activeProjectName={activeProjectName} onNavigate={navigate} onAddVehicle={addVehicle} onOpenProject={openProject} /></main></div></>
+  const enterWorkshop = async () => {
+    if (introEntered) return
+    setIntroEntered(true)
+    const audio = engineAudioRef.current
+    const AudioContextClass = window.AudioContext ?? (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+    if (!audio || !AudioContextClass) return
+    if (!engineAudioContextRef.current) {
+      const context = new AudioContextClass()
+      const gain = context.createGain()
+      context.createMediaElementSource(audio).connect(gain).connect(context.destination)
+      engineAudioContextRef.current = context
+      engineGainRef.current = gain
+    }
+    const context = engineAudioContextRef.current
+    const gain = engineGainRef.current
+    if (!context || !gain) return
+    try {
+      await context.resume()
+      audio.volume = 1
+      audio.currentTime = 0
+      gain.gain.cancelScheduledValues(context.currentTime)
+      gain.gain.setValueAtTime(.72, context.currentTime)
+      gain.gain.linearRampToValueAtTime(.0001, context.currentTime + 2)
+      await audio.play()
+      engineEndTimerRef.current = window.setTimeout(() => { audio.pause(); audio.currentTime = 0 }, 2_000)
+    } catch { /* A entrada continua mesmo sem saída de áudio disponível. */ }
+  }
+  const introOverlay = <section className={introEntered ? 'site-intro site-intro--hidden' : 'site-intro site-intro--active'} aria-label="Entrada da oficina"><div className="site-intro__panel"><img src="/modlab-logo.png" alt="Modlab" /><span>MODLAB / PERFORMANCE GARAGE</span><h1>Entre na oficina.</h1><p>O S63 V8 está pronto.</p><button type="button" onClick={() => void enterWorkshop()}>Entrar na oficina <span>↗</span></button></div></section>
+  if (active === 7) return <><audio ref={engineAudioRef} src="/audio/s63-amg-v8-engine-revs.mp3" playsInline preload="auto" />{introOverlay}<DesignLab /></>
+  return <><audio ref={engineAudioRef} src="/audio/s63-amg-v8-engine-revs.mp3" playsInline preload="auto" />{introOverlay}<div className="app-shell"><Sidebar active={active} onChange={navigate} open={navOpen} onClose={() => setNavOpen(false)} />{navOpen && <button className="backdrop" onClick={() => setNavOpen(false)} aria-label="Fechar menu" />}<main><header className="page-header"><button className="menu-button" onClick={() => setNavOpen(true)} aria-label="Abrir menu"><Menu size={20} /></button><div><h1>{current.title}</h1>{active !== 1 && <p>{current.description}</p>}</div></header><AppContent active={active} projects={projects} activeProjectName={activeProjectName} onNavigate={navigate} onAddVehicle={addVehicle} onOpenProject={openProject} /></main></div></>
 }
