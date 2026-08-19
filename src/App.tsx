@@ -573,12 +573,12 @@ export default function App() {
       audio.currentTime = 0
       gain.gain.cancelScheduledValues(context.currentTime)
       gain.gain.setValueAtTime(.72, context.currentTime)
-      gain.gain.linearRampToValueAtTime(.0001, context.currentTime + 2)
+      gain.gain.linearRampToValueAtTime(.0001, context.currentTime + 1.8)
       await audio.play()
-      engineEndTimerRef.current = window.setTimeout(() => { audio.pause(); audio.currentTime = 0 }, 2_000)
+      engineEndTimerRef.current = window.setTimeout(() => { audio.pause(); audio.currentTime = 0 }, 1_800)
     } catch { /* A entrada continua mesmo sem saída de áudio disponível. */ }
   }
   const introOverlay = <section className={introEntered ? 'site-intro site-intro--hidden' : 'site-intro site-intro--active'} aria-label="Entrada da oficina"><div className="site-intro__panel"><img src="/modlab-logo.png" alt="Modlab" /><span>MODLAB / PERFORMANCE GARAGE</span><h1>Entre na oficina.</h1><button type="button" onClick={() => void enterWorkshop()}>Entrar na oficina <span>↗</span></button></div></section>
-  if (active === 7) return <><audio ref={engineAudioRef} src="/audio/s63-amg-v8-engine-revs.mp3" playsInline preload="auto" />{introOverlay}<DesignLab /></>
-  return <><audio ref={engineAudioRef} src="/audio/s63-amg-v8-engine-revs.mp3" playsInline preload="auto" />{introOverlay}<div className="app-shell"><Sidebar active={active} onChange={navigate} open={navOpen} onClose={() => setNavOpen(false)} />{navOpen && <button className="backdrop" onClick={() => setNavOpen(false)} aria-label="Fechar menu" />}<main><header className="page-header"><button className="menu-button" onClick={() => setNavOpen(true)} aria-label="Abrir menu"><Menu size={20} /></button><div><h1>{current.title}</h1>{active !== 1 && <p>{current.description}</p>}</div></header><AppContent active={active} projects={projects} activeProjectName={activeProjectName} onNavigate={navigate} onAddVehicle={addVehicle} onOpenProject={openProject} /></main></div></>
+  if (active === 7) return <><audio ref={engineAudioRef} src="/audio/vw-r32-v6.mp3" playsInline preload="auto" />{introOverlay}<DesignLab /></>
+  return <><audio ref={engineAudioRef} src="/audio/vw-r32-v6.mp3" playsInline preload="auto" />{introOverlay}<div className="app-shell"><Sidebar active={active} onChange={navigate} open={navOpen} onClose={() => setNavOpen(false)} />{navOpen && <button className="backdrop" onClick={() => setNavOpen(false)} aria-label="Fechar menu" />}<main><header className="page-header"><button className="menu-button" onClick={() => setNavOpen(true)} aria-label="Abrir menu"><Menu size={20} /></button><div><h1>{current.title}</h1>{active !== 1 && <p>{current.description}</p>}</div></header><AppContent active={active} projects={projects} activeProjectName={activeProjectName} onNavigate={navigate} onAddVehicle={addVehicle} onOpenProject={openProject} /></main></div></>
 }
