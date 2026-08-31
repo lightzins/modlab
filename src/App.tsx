@@ -392,6 +392,7 @@ function DesignLab() {
   const [buildSteps, setBuildSteps] = useState<boolean[]>(() => { try { const stored = window.localStorage.getItem('modlab-showcase-steps'); return stored ? JSON.parse(stored) as boolean[] : [true, true, false, false] } catch { return [true, true, false, false] } })
   const [savedParts, setSavedParts] = useState<string[]>(() => { try { const stored = window.localStorage.getItem('modlab-showcase-parts'); return stored ? JSON.parse(stored) as string[] : [] } catch { return [] } })
   const [configurationSaved, setConfigurationSaved] = useState(false)
+  const [vehiclePickerOpen, setVehiclePickerOpen] = useState(false)
   const [garageQuery, setGarageQuery] = useState('')
   const [searchingGarage, setSearchingGarage] = useState(false)
   const [vehicles, setVehicles] = useState(() => {
@@ -444,7 +445,7 @@ function DesignLab() {
   const current = options[section as keyof typeof options]
   const Icon = current.icon
   const vehicle = vehicles[vehicleIndex] ?? vehicles[0]
-  const selectVehicle = (index: number) => { setVehicleIndex(index); setScreen('TUNING') }
+  const selectVehicle = (index: number) => { setVehicleIndex(index); setVehiclePickerOpen(false); setScreen('TUNING') }
   const marketParts = [{ name: 'Kit freios carbono', type: 'FREIOS · 410 MM', price: 'R$ 28.700', supplier: 'Apex Performance' }, { name: 'Coilover Clubsport', type: 'SUSPENSÃO · AJUSTÁVEL', price: 'R$ 12.400', supplier: 'Trackline Garage' }, { name: 'Escape valvulado', type: 'ESCAPE · TITÂNIO', price: 'R$ 18.200', supplier: 'Ferrovia Motorsport' }]
   const totalSaved = savedParts.reduce((sum, partName) => sum + Number(marketParts.find((part) => part.name === partName)?.price.replace(/[^0-9]/g, '') ?? 0), 0)
   const saveConfiguration = () => { setConfigurationSaved(true); window.setTimeout(() => setConfigurationSaved(false), 1800) }
@@ -465,7 +466,8 @@ function DesignLab() {
     } finally { setSearchingGarage(false) }
   }
   const visibleVehicles = vehicles.filter((car) => normalizeText(car.name).includes(normalizeText(garageQuery)))
-  const renderShowcaseHeader = () => <><header className="showcase-header"><a className="showcase-brand" href="/"><img src="/modlab-logo.png" alt="Modlab" /><strong>MODLAB</strong></a><nav>{['GARAGEM', 'BUILD', 'TUNING', 'MERCADO'].map((item) => <button onClick={() => setScreen(item)} className={item === screen ? 'active' : ''} key={item}>{item}</button>)}</nav><div className="showcase-profile"><i /><span>BETA LOCAL</span></div></header><div className="showcase-subnav"><span>{screen === 'GARAGEM' ? 'GARAGEM / CATÁLOGO DE VEÍCULOS' : 'OFICINA / PERSONALIZAÇÃO'}</span><span>ALTERAÇÕES SALVAS NESTE DISPOSITIVO</span><button onClick={() => setVehicleIndex((index) => (index + 1) % vehicles.length)}><CarFront size={15} /> Trocar veículo</button></div></>
+  const vehiclePicker = vehiclePickerOpen ? <div className="vehicle-picker-backdrop" role="dialog" aria-modal="true" aria-label="Trocar veículo"><section className="vehicle-picker"><header><div><span className="eyebrow">GARAGEM MODLAB</span><h2>Escolha seu veículo</h2><p>Selecione um projeto para continuar a personalização.</p></div><button aria-label="Fechar seletor" onClick={() => setVehiclePickerOpen(false)}><X size={18} /></button></header><div className="vehicle-picker__list">{vehicles.slice(0, 12).map((car, index) => <button className={vehicleIndex === index ? 'selected' : ''} key={car.name} onClick={() => selectVehicle(index)}>{car.image ? <img src={car.image} alt="" /> : <span><ImageOff size={16} /></span>}<div><small>BUILD {String(index + 1).padStart(3, '0')}</small><strong>{car.name}</strong><em>{car.power === '—' ? 'Versão pendente' : `${car.power} cv`} · Classe {car.grade}</em></div>{vehicleIndex === index && <Check size={16} />}</button>)}</div><footer><button onClick={() => { setVehiclePickerOpen(false); setScreen('GARAGEM') }}><Search size={15} /> Ver catálogo completo</button><span>{vehicles.length} modelos no catálogo local</span></footer></section></div> : null
+  const renderShowcaseHeader = () => <><header className="showcase-header"><a className="showcase-brand" href="/"><img src="/modlab-logo.png" alt="Modlab" /><strong>MODLAB</strong></a><nav>{['GARAGEM', 'BUILD', 'TUNING', 'MERCADO'].map((item) => <button onClick={() => setScreen(item)} className={item === screen ? 'active' : ''} key={item}>{item}</button>)}</nav><div className="showcase-profile"><i /><span>SESSÃO LOCAL</span></div></header><div className="showcase-subnav"><span>{screen === 'GARAGEM' ? 'GARAGEM / CATÁLOGO DE VEÍCULOS' : 'OFICINA / PERSONALIZAÇÃO'}</span><span>ALTERAÇÕES SALVAS NESTE DISPOSITIVO</span><button onClick={() => setVehiclePickerOpen(true)}><CarFront size={15} /> Veículo atual</button></div>{vehiclePicker}</>
   if (screen === 'GARAGEM' && garageQuery.trim()) return <section className="showcase-site" aria-label="Resultados de busca da garagem">
     {renderShowcaseHeader()}
     <main className="showcase-search-page">
