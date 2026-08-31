@@ -895,6 +895,34 @@ main { background: linear-gradient(135deg, #111 0%, #161616 54%, #111 100%); }
 .vehicle-picker__list > button > svg { color: var(--ml-green); }
 .vehicle-picker footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 18px; border-top: 1px solid rgba(247,247,247,.09); color: #939393; font-size: 8px; }
 .vehicle-picker footer button { display: inline-flex; align-items: center; gap: 6px; padding: 8px 10px; border: 0; border-radius: 6px; color: #06130e; background: var(--ml-green); cursor: pointer; font-size: 8px; font-weight: 800; }
-@media (max-width: 580px) { .showcase-site { background-size: 26px 26px, 26px 26px, auto, auto; } .showcase-identity::before { margin-bottom: 10px; } .showcase-identity { padding-top: 18px; } .showcase-config { border-radius: 10px; } .vehicle-picker-backdrop { align-items: end; padding: 0; } .vehicle-picker { max-height: 88vh; border-radius: 14px 14px 0 0; } .vehicle-picker > header { padding: 19px 17px; } .vehicle-picker__list { grid-template-columns: 1fr; max-height: 52vh; padding: 10px; } .vehicle-picker footer { align-items: flex-start; flex-direction: column; padding: 12px 15px; } }
+.vehicle-setup { width: min(530px, 100%); overflow: hidden; border: 1px solid rgba(247,247,247,.16); border-top-color: var(--ml-pink); border-radius: 12px; background: #181818; box-shadow: 0 30px 100px rgba(0,0,0,.62); }
+.vehicle-setup > header { display: flex; justify-content: space-between; gap: 18px; padding: 24px; border-bottom: 1px solid rgba(247,247,247,.09); background: radial-gradient(circle at 90% 0%, rgba(0,245,160,.16), transparent 48%), #202020; }
+.vehicle-setup h2 { margin: 5px 0 8px; font-size: 25px; letter-spacing: -1px; }
+.vehicle-setup p { margin: 0; color: #aaa; font-size: 9px; line-height: 1.55; }
+.vehicle-setup > header button { display: grid; place-items: center; width: 34px; height: 34px; border: 1px solid rgba(247,247,247,.12); border-radius: 7px; color: #f7f7f7; background: #121212; cursor: pointer; }
+.vehicle-setup__vehicle { display: flex; align-items: center; gap: 12px; margin: 18px 22px 13px; padding: 10px; border: 1px solid rgba(247,247,247,.08); border-radius: 8px; background: #111; }
+.vehicle-setup__vehicle img, .vehicle-setup__vehicle > span { width: 66px; height: 46px; object-fit: cover; border-radius: 5px; background: #242424; }
+.vehicle-setup__vehicle > span { display: grid; place-items: center; color: #888; }
+.vehicle-setup__vehicle strong { font-size: 11px; }
+.vehicle-setup > label { display: grid; gap: 7px; margin: 13px 22px; color: var(--ml-green); font-size: 7px; font-weight: 800; letter-spacing: .7px; }
+.vehicle-setup input { height: 42px; padding: 0 12px; border: 1px solid rgba(247,247,247,.12); border-radius: 6px; outline: 0; color: #f7f7f7; background: #111; font-size: 11px; }
+.vehicle-setup input:focus { border-color: var(--ml-green); box-shadow: 0 0 0 3px rgba(0,245,160,.1); }
+.vehicle-setup footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 17px 22px; border-top: 1px solid rgba(247,247,247,.08); color: #969696; font-size: 7px; line-height: 1.4; }
+.vehicle-setup footer span { max-width: 220px; }
+.vehicle-setup footer button { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 6px; padding: 10px 12px; border: 0; border-radius: 6px; color: #06130e; background: var(--ml-green); cursor: pointer; font-size: 8px; font-weight: 800; }
+.showcase-build--workspace { background: radial-gradient(circle at 75% 0%, rgba(0,245,160,.1), transparent 28%), #111; }
+.build-track button { grid-template-columns: auto 1fr auto; }
+.build-track button em { padding: 5px 7px; border: 1px solid rgba(247,247,247,.11); border-radius: 20px; color: #999; font-size: 6px; font-style: normal; }
+.build-track button.done em { border-color: rgba(0,245,160,.28); color: var(--ml-green); }
+.showcase-build aside p { margin-top: 5px; color: #aaa; font-size: 8px; }
+.showcase-market--workspace { background: radial-gradient(circle at 15% 0%, rgba(255,0,110,.15), transparent 25%), #111; }
+.market-context { display: flex !important; align-items: center; gap: 10px; margin-bottom: 12px; padding: 11px 13px; border: 1px solid rgba(0,245,160,.2); border-radius: 8px; background: rgba(0,245,160,.045); }
+.market-context > svg { color: var(--ml-green); }
+.market-context div { display: grid; gap: 3px; }
+.market-context small { color: #8c8c8c; font-size: 6px; letter-spacing: .6px; }
+.market-context strong { color: #f7f7f7; font-size: 10px; }
+.market-context span { color: #aaa; font-size: 7px; }
+.market-context button { margin-left: auto; padding: 7px 9px; border: 1px solid rgba(247,247,247,.13); border-radius: 5px; color: #ddd; background: #181818; cursor: pointer; font-size: 7px; }
+@media (max-width: 580px) { .showcase-site { background-size: 26px 26px, 26px 26px, auto, auto; } .showcase-identity::before { margin-bottom: 10px; } .showcase-identity { padding-top: 18px; } .showcase-config { border-radius: 10px; } .vehicle-picker-backdrop { align-items: end; padding: 0; } .vehicle-picker, .vehicle-setup { max-height: 88vh; border-radius: 14px 14px 0 0; } .vehicle-picker > header, .vehicle-setup > header { padding: 19px 17px; } .vehicle-picker__list { grid-template-columns: 1fr; max-height: 52vh; padding: 10px; } .vehicle-picker footer, .vehicle-setup footer { align-items: flex-start; flex-direction: column; padding: 12px 15px; } .vehicle-setup__vehicle, .vehicle-setup > label { margin-right: 16px; margin-left: 16px; } .market-context { align-items: flex-start; flex-wrap: wrap; } .market-context button { margin-left: 28px; } }
 @media (max-width: 760px) { .collection-grid { grid-template-columns: 1fr; } .collection-grid button { min-height: 190px; } .showcase-build { grid-template-columns: 1fr; } .showcase-build > aside { min-height: 240px; } }
 @media (max-width: 580px) { .showcase-collection, .showcase-build, .showcase-market { min-height: calc(100vh - 173px); padding: 24px 16px; } .showcase-search-page { min-height: calc(100vh - 173px); padding: 24px 16px; } .collection-search { grid-template-columns: auto 1fr; } .collection-search button { grid-column: 1 / -1; } .showcase-collection--catalog .collection-grid > button { min-height: 74px; grid-template-columns: 100px 1fr; } .showcase-collection--catalog .collection-grid > button > img, .showcase-collection--catalog .collection-grid > button > .collection-image-loading { width: 100px; height: 74px; } .showcase-market article { grid-template-columns: auto 1fr auto; } .showcase-market article > strong { grid-column: 2; } .showcase-market article > button { grid-column: 3; grid-row: 1 / 3; } }
