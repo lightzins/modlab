@@ -719,6 +719,7 @@ main { background: linear-gradient(135deg, #111 0%, #161616 54%, #111 100%); }
 @media (max-width: 480px) { .test-garage-head, .test-garage-footer { align-items: flex-start; flex-direction: column; } .test-garage-stage { min-height: 530px; } .test-car-data { width: 100%; padding: 20px; } .test-car-data h3 { font-size: 23px; } .test-side-panel { right: 10px; bottom: 10px; width: calc(100% - 20px); } .test-garage-dock button { min-height: 82px; padding: 10px; } }
 
 .showcase-site { min-height: 100vh; overflow: hidden; color: #f7f7f7; background: #0a0a0a; }
+.showcase-site { position: relative; isolation: isolate; background-image: linear-gradient(rgba(255,255,255,.022) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.022) 1px, transparent 1px), radial-gradient(circle at 80% 8%, rgba(255,0,110,.13), transparent 30%), #090909; background-size: 34px 34px, 34px 34px, auto, auto; }
 .showcase-header { height: 70px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 25px; padding: 0 clamp(18px, 4vw, 62px); border-bottom: 1px solid rgba(247,247,247,.1); background: rgba(11,11,11,.94); }
 .showcase-brand { display: inline-flex; align-items: center; gap: 9px; color: #f7f7f7; text-decoration: none; font-size: 12px; letter-spacing: 1.2px; }
 .showcase-brand img { width: 31px; height: 31px; border-radius: 8px; object-fit: cover; box-shadow: 0 0 0 1px rgba(0,245,160,.38); }
@@ -735,11 +736,13 @@ main { background: linear-gradient(135deg, #111 0%, #161616 54%, #111 100%); }
 .showcase-subnav span:nth-child(2) { margin-left: auto; }
 .showcase-subnav button { display: inline-flex; align-items: center; gap: 6px; padding: 5px 8px; border: 1px solid rgba(247,247,247,.12); border-radius: 5px; color: #e4e4e4; background: #202020; cursor: pointer; font-size: 7px; }
 .showcase-main { position: relative; min-height: calc(100vh - 246px); overflow: hidden; background: #161616; }
+.showcase-main::before { content: ''; position: absolute; z-index: 1; top: 0; right: 0; left: 0; height: 3px; background: linear-gradient(90deg, transparent 4%, var(--ml-green) 25%, var(--ml-pink) 62%, transparent 95%); opacity: .9; }
 .showcase-no-image { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 9px; color: #aaa; background: #1b1b1b; font-size: 9px; }
 .showcase-photo, .showcase-photo img, .showcase-light { position: absolute; inset: 0; width: 100%; height: 100%; }
 .showcase-photo img { object-fit: cover; object-position: center; filter: saturate(.8) contrast(1.1) brightness(.6); }
 .showcase-light { background: radial-gradient(circle at 72% 42%, rgba(255,0,110,.24), transparent 22%), radial-gradient(circle at 42% 68%, rgba(0,245,160,.15), transparent 31%), linear-gradient(90deg, rgba(7,7,7,.94) 0%, rgba(10,10,10,.45) 36%, rgba(10,10,10,.05) 67%, rgba(7,7,7,.72) 100%), linear-gradient(0deg, rgba(0,0,0,.7), transparent 46%); }
 .showcase-identity { position: relative; z-index: 1; width: min(470px, 48%); padding: clamp(28px, 5vw, 74px) clamp(20px, 5vw, 70px); }
+.showcase-identity::before { content: 'MODLAB / CONFIGURADOR'; display: block; margin-bottom: 16px; color: var(--ml-green); font-size: 7px; font-weight: 800; letter-spacing: 1.3px; }
 .showcase-identity h1 { max-width: 400px; margin: 0 0 8px; color: #f7f7f7; font-size: clamp(30px, 4.2vw, 59px); line-height: .96; letter-spacing: -2px; }
 .showcase-identity > p { margin: 0; color: #b6b6b6; font-size: 10px; }
 .showcase-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; margin-top: 30px; }
@@ -753,6 +756,7 @@ main { background: linear-gradient(135deg, #111 0%, #161616 54%, #111 100%); }
 .showcase-meter > span b:last-child { color: var(--ml-green); }
 .showcase-meter > i { display: block; height: 4px; background: linear-gradient(90deg, var(--ml-green), #89ffd4); box-shadow: 0 0 15px rgba(0,245,160,.35); }
 .showcase-config { position: absolute; z-index: 2; top: clamp(16px, 3vw, 38px); right: clamp(16px, 4vw, 58px); width: min(315px, 31%); overflow: hidden; border: 1px solid rgba(247,247,247,.13); border-radius: 9px; background: rgba(17,17,17,.88); box-shadow: 0 23px 50px rgba(0,0,0,.37); backdrop-filter: blur(13px); }
+.showcase-config { border-top-color: rgba(0,245,160,.6); box-shadow: 0 23px 50px rgba(0,0,0,.48), inset 0 1px 0 rgba(255,255,255,.05); }
 .showcase-config header { display: flex; align-items: center; gap: 9px; padding: 13px; border-bottom: 1px solid rgba(247,247,247,.08); }
 .showcase-config header > span { display: grid; place-items: center; width: 33px; height: 33px; border-radius: 7px; color: #07150f; background: var(--ml-green); }
 .showcase-config header small, .showcase-config header strong { display: block; }
@@ -774,6 +778,8 @@ main { background: linear-gradient(135deg, #111 0%, #161616 54%, #111 100%); }
 .showcase-actions button:last-child { border-right: 0; }
 .showcase-actions button:hover { background: rgba(255,255,255,.035); }
 .showcase-actions button.active { color: #07150f; background: var(--ml-green); }
+.showcase-actions button { transition: background .2s ease, color .2s ease, transform .2s ease; }
+.showcase-actions button:hover { transform: translateY(-2px); }
 .showcase-actions button > span { grid-row: 1 / 3; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 8px; color: var(--ml-pink); background: #0d0d0d; }
 .showcase-actions button.active > span { color: #07150f; background: rgba(255,255,255,.48); }
 .showcase-actions strong { align-self: end; font-size: 10px; }
@@ -869,5 +875,26 @@ main { background: linear-gradient(135deg, #111 0%, #161616 54%, #111 100%); }
 .showcase-market article > strong { color: #f7f7f7; font-size: 10px; }
 .showcase-market article > button { display: inline-flex; align-items: center; gap: 5px; min-width: 68px; justify-content: center; padding: 8px; border: 1px solid rgba(247,247,247,.12); border-radius: 6px; color: #ddd; background: #151515; cursor: pointer; font-size: 7px; }
 .showcase-market article > button.saved { border-color: rgba(0,245,160,.42); color: #07150f; background: var(--ml-green); }
+
+/* Seletor contextual: evita trocar de carro sem saber qual será aberto. */
+.vehicle-picker-backdrop { position: fixed; z-index: 80; inset: 0; display: grid; place-items: center; padding: 22px; background: rgba(0,0,0,.74); backdrop-filter: blur(10px); }
+.vehicle-picker { width: min(820px, 100%); max-height: min(720px, calc(100vh - 44px)); overflow: hidden; border: 1px solid rgba(247,247,247,.15); border-top-color: var(--ml-green); border-radius: 12px; background: #161616; box-shadow: 0 30px 100px rgba(0,0,0,.62); }
+.vehicle-picker > header { display: flex; justify-content: space-between; gap: 20px; padding: 24px; border-bottom: 1px solid rgba(247,247,247,.09); background: radial-gradient(circle at 82% 0%, rgba(255,0,110,.2), transparent 40%), #1c1c1c; }
+.vehicle-picker h2 { margin: 5px 0 7px; font-size: 25px; letter-spacing: -1px; }
+.vehicle-picker p { margin: 0; color: #aaa; font-size: 9px; }
+.vehicle-picker > header > button { display: grid; place-items: center; align-self: flex-start; width: 34px; height: 34px; border: 1px solid rgba(247,247,247,.12); border-radius: 7px; color: #eee; background: #121212; cursor: pointer; }
+.vehicle-picker__list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); max-height: 470px; gap: 7px; overflow-y: auto; padding: 12px; }
+.vehicle-picker__list > button { min-height: 78px; display: grid; grid-template-columns: 94px minmax(0, 1fr) auto; align-items: center; gap: 11px; overflow: hidden; padding: 0 11px 0 0; border: 1px solid rgba(247,247,247,.1); border-radius: 8px; color: #eee; background: #202020; cursor: pointer; text-align: left; }
+.vehicle-picker__list > button:hover, .vehicle-picker__list > button.selected { border-color: var(--ml-green); background: #252525; }
+.vehicle-picker__list img, .vehicle-picker__list > button > span { width: 94px; height: 78px; object-fit: cover; background: #101010; }
+.vehicle-picker__list > button > span { display: grid; place-items: center; color: #777; }
+.vehicle-picker__list small, .vehicle-picker__list strong, .vehicle-picker__list em { display: block; }
+.vehicle-picker__list small { margin-bottom: 5px; color: var(--ml-green); font-size: 6px; font-weight: 800; letter-spacing: .7px; }
+.vehicle-picker__list strong { overflow: hidden; margin-bottom: 4px; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.vehicle-picker__list em { color: #aaa; font-size: 7px; font-style: normal; }
+.vehicle-picker__list > button > svg { color: var(--ml-green); }
+.vehicle-picker footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 18px; border-top: 1px solid rgba(247,247,247,.09); color: #939393; font-size: 8px; }
+.vehicle-picker footer button { display: inline-flex; align-items: center; gap: 6px; padding: 8px 10px; border: 0; border-radius: 6px; color: #06130e; background: var(--ml-green); cursor: pointer; font-size: 8px; font-weight: 800; }
+@media (max-width: 580px) { .showcase-site { background-size: 26px 26px, 26px 26px, auto, auto; } .showcase-identity::before { margin-bottom: 10px; } .showcase-identity { padding-top: 18px; } .showcase-config { border-radius: 10px; } .vehicle-picker-backdrop { align-items: end; padding: 0; } .vehicle-picker { max-height: 88vh; border-radius: 14px 14px 0 0; } .vehicle-picker > header { padding: 19px 17px; } .vehicle-picker__list { grid-template-columns: 1fr; max-height: 52vh; padding: 10px; } .vehicle-picker footer { align-items: flex-start; flex-direction: column; padding: 12px 15px; } }
 @media (max-width: 760px) { .collection-grid { grid-template-columns: 1fr; } .collection-grid button { min-height: 190px; } .showcase-build { grid-template-columns: 1fr; } .showcase-build > aside { min-height: 240px; } }
 @media (max-width: 580px) { .showcase-collection, .showcase-build, .showcase-market { min-height: calc(100vh - 173px); padding: 24px 16px; } .showcase-search-page { min-height: calc(100vh - 173px); padding: 24px 16px; } .collection-search { grid-template-columns: auto 1fr; } .collection-search button { grid-column: 1 / -1; } .showcase-collection--catalog .collection-grid > button { min-height: 74px; grid-template-columns: 100px 1fr; } .showcase-collection--catalog .collection-grid > button > img, .showcase-collection--catalog .collection-grid > button > .collection-image-loading { width: 100px; height: 74px; } .showcase-market article { grid-template-columns: auto 1fr auto; } .showcase-market article > strong { grid-column: 2; } .showcase-market article > button { grid-column: 3; grid-row: 1 / 3; } }
