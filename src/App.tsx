@@ -6,7 +6,7 @@ import {
   CircleDollarSign, Clock3, Database, Eye, Gauge, Grid2X2,
   Bot, ImageOff, Languages, LoaderCircle, Menu, Moon, MoreHorizontal, Plus, Ruler, Save,
   LogOut, MessageCircle, Search, Send, Settings, ShieldCheck, SlidersHorizontal, Sparkles, Trash2,
-  Wrench, X, Zap,
+  KeyRound, Mail, UserRound, Wrench, X, Zap,
 } from 'lucide-react'
 
 type NavItem = { label: string; title: string; description: string; icon: ComponentType<{ size?: number; strokeWidth?: number }> }
@@ -23,35 +23,70 @@ async function getAuthenticatedHeaders() {
 }
 
 function LoginPage() {
+  const [mode, setMode] = useState<'login' | 'signup'>('login')
+  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
+  const [message, setMessage] = useState('')
 
-  const sendMagicLink = async (event: FormEvent) => {
+  const submit = async (event: FormEvent) => {
     event.preventDefault()
-    if (!supabase || !email.trim()) return
+    if (!supabase || !email.trim() || !password) return
     setStatus('sending')
-    const { error } = await supabase.auth.signInWithOtp({
-      email: email.trim(),
-      options: { emailRedirectTo: window.location.origin },
-    })
+    setMessage('')
+    const result = mode === 'signup'
+      ? await supabase.auth.signUp({ email: email.trim(), password, options: { data: { full_name: name.trim() }, emailRedirectTo: window.location.origin } })
+      : await supabase.auth.signInWithPassword({ email: email.trim(), password })
+    if (result.error) { setStatus('error'); setMessage(result.error.message); return }
+    setStatus('sent')
+    setMessage(mode === 'signup' && !result.data.session ? 'Conta criada. Confirme seu e-mail para entrar.' : 'Acesso realizado com sucesso.')
+  }
+
+  const resetPassword = async () => {
+    if (!supabase || !email.trim()) { setStatus('error'); setMessage('Informe seu e-mail para recuperar a senha.'); return }
+    setStatus('sending')
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: window.location.origin })
     setStatus(error ? 'error' : 'sent')
+    setMessage(error ? error.message : 'Enviamos um link para redefinir sua senha.')
   }
 
   return <main className="auth-page">
     <section className="auth-card">
       <img src="/modlab-logo.png" alt="Modlab" />
       <span>MODLAB / BETA</span>
-      <h1>Sua garagem começa aqui.</h1>
-      <p>Entre ou crie sua conta com um link seguro enviado por e-mail.</p>
-      <form onSubmit={sendMagicLink}>
+      <h1>{mode === 'login' ? 'Entre na sua garagem.' : 'Crie sua conta.'}</h1>
+      <p>{mode === 'login' ? 'Acesse seus projetos usando e-mail e senha.' : 'Salve suas builds em uma conta pessoal.'}</p>
+      <div className="auth-tabs"><button className={mode === 'login' ? 'active' : ''} type="button" onClick={() => { setMode('login'); setStatus('idle') }}>Entrar</button><button className={mode === 'signup' ? 'active' : ''} type="button" onClick={() => { setMode('signup'); setStatus('idle') }}>Criar conta</button></div>
+      <form onSubmit={submit}>
+        {mode === 'signup' && <><label htmlFor="signup-name">Nome</label><div className="auth-input"><UserRound size={17} /><input id="signup-name" value={name} onChange={(event) => setName(event.target.value)} placeholder="Como quer ser chamado?" required /></div></>}
         <label htmlFor="login-email">E-mail</label>
-        <input id="login-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="voce@exemplo.com" required />
-        <button type="submit" disabled={status === 'sending'}>{status === 'sending' ? 'Enviando...' : 'Enviar link de acesso'}</button>
+        <div className="auth-input"><Mail size={17} /><input id="login-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="voce@exemplo.com" required /></div>
+        <label htmlFor="login-password">Senha</label>
+        <div className="auth-input"><KeyRound size={17} /><input id="login-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Mínimo de 6 caracteres" minLength={6} required /></div>
+        <button type="submit" disabled={status === 'sending'}>{status === 'sending' ? 'Aguarde...' : mode === 'login' ? 'Entrar na conta' : 'Criar minha conta'}</button>
       </form>
-      {status === 'sent' && <p className="auth-message success">Confira seu e-mail: seu link de acesso foi enviado.</p>}
-      {status === 'error' && <p className="auth-message error">Não foi possível enviar o acesso. Verifique o e-mail e tente novamente.</p>}
+      {mode === 'login' && <button type="button" className="auth-link" onClick={() => void resetPassword()} disabled={status === 'sending'}>Esqueci minha senha</button>}
+      {status === 'sent' && <p className="auth-message success">{message}</p>}
+      {status === 'error' && <p className="auth-message error">{message}</p>}
     </section>
   </main>
+}
+
+function ProfilePage({ user, onSignOut, onBack }: { user: User; onSignOut?: () => void; onBack: () => void }) {
+  const [name, setName] = useState(String(user.user_metadata.full_name ?? ''))
+  const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const saveProfile = async (event: FormEvent) => {
+    event.preventDefault()
+    if (!supabase) return
+    setStatus('saving')
+    const displayName = name.trim()
+    const { error } = await supabase.auth.updateUser({ data: { full_name: displayName } })
+    if (!error) await supabase.from('profiles').upsert({ id: user.id, display_name: displayName || null }, { onConflict: 'id' })
+    setStatus(error ? 'error' : 'saved')
+  }
+  const initials = (name || user.email || 'M').trim().slice(0, 1).toUpperCase()
+  return <main className="profile-page"><section className="profile-card"><header><button type="button" className="profile-back" onClick={onBack}>← Voltar para a oficina</button><span className="eyebrow">CONTA MODLAB</span><div className="profile-avatar">{initials}</div><h1>Seu perfil</h1><p>Gerencie os dados da sua conta e seus acessos.</p></header><form onSubmit={saveProfile}><label htmlFor="profile-name">Nome de exibição</label><input id="profile-name" value={name} onChange={(event) => setName(event.target.value)} placeholder="Seu nome" /><label>E-mail</label><div className="profile-email"><Mail size={16} />{user.email}</div><button type="submit" disabled={status === 'saving'}>{status === 'saving' ? 'Salvando...' : status === 'saved' ? 'Alterações salvas' : 'Salvar perfil'}</button>{status === 'error' && <p className="auth-message error">Não foi possível salvar agora.</p>}</form><footer><button type="button" onClick={onSignOut}><LogOut size={16} /> Sair da conta</button></footer></section></main>
 }
 
 const navItems: NavItem[] = [
@@ -626,7 +661,8 @@ function DesignLab({ user, onSignOut }: { user?: User | null; onSignOut?: () => 
   const vehicleSetup = vehicleSetupIndex === null ? null : vehicles[vehicleSetupIndex]
   const vehicleSetupModal = vehicleSetup ? <div className="vehicle-picker-backdrop" role="dialog" aria-modal="true" aria-label="Configurar veículo"><form className="vehicle-setup" onSubmit={confirmVehicleSetup}><header><div><span className="eyebrow">ETAPA 02 / 02</span><h2>Defina seu carro.</h2><p>{vehicleSetup.name} foi selecionado. Informe a versão e o ano para iniciar uma build coerente.</p></div><button type="button" aria-label="Fechar" onClick={() => setVehicleSetupIndex(null)}><X size={18} /></button></header><div className="vehicle-setup__vehicle">{vehicleSetup.image ? <img src={vehicleSetup.image} alt="" /> : <span><ImageOff size={22} /></span>}<strong>{vehicleSetup.name}</strong></div><label>VERSÃO / MODELO<input value={vehicleVersion} onChange={(event) => setVehicleVersion(event.target.value)} placeholder="Ex.: Touring 1.5 Turbo" autoFocus required /></label><label>ANO DO VEÍCULO<input inputMode="numeric" pattern="[0-9]{4}" min="1950" max="2030" value={vehicleYear} onChange={(event) => setVehicleYear(event.target.value.replace(/[^0-9]/g, '').slice(0, 4))} placeholder="Ex.: 2020" required /></label><footer><span>Os dados servem para filtrar peças e confirmar especificações depois.</span><button type="submit">Continuar para a oficina <ChevronRight size={16} /></button></footer></form></div> : null
   const vehiclePicker = vehiclePickerOpen ? <div className="vehicle-picker-backdrop" role="dialog" aria-modal="true" aria-label="Trocar veículo"><section className="vehicle-picker"><header><div><span className="eyebrow">GARAGEM MODLAB</span><h2>Escolha seu veículo</h2><p>Selecione um projeto e confirme versão e ano antes de personalizar.</p></div><button aria-label="Fechar seletor" onClick={() => setVehiclePickerOpen(false)}><X size={18} /></button></header><div className="vehicle-picker__list">{vehicles.slice(0, 12).map((car, index) => <button className={vehicleIndex === index ? 'selected' : ''} key={car.name} onClick={() => openVehicleSetup(index)}>{car.image ? <img src={car.image} alt="" /> : <span><ImageOff size={16} /></span>}<div><small>MODELO {String(index + 1).padStart(3, '0')}</small><strong>{car.name}</strong><em>{car.version && car.year ? `${car.version} · ${car.year}` : 'Informe versão e ano'}</em></div>{vehicleIndex === index && <Check size={16} />}</button>)}</div><footer><button onClick={() => { setVehiclePickerOpen(false); setScreen('GARAGEM') }}><Search size={15} /> Ver catálogo completo</button><span>{vehicles.length} modelos no catálogo local</span></footer></section></div> : null
-  const renderShowcaseHeader = () => <><header className="showcase-header"><a className="showcase-brand" href="/"><img src="/modlab-logo.png" alt="Modlab" /><strong>MODLAB</strong></a><nav>{['GARAGEM', 'BUILD', 'TUNING', 'MERCADO'].map((item) => <button onClick={() => setScreen(item)} className={item === screen ? 'active' : ''} key={item}>{item}</button>)}</nav><div className="showcase-profile"><i /><span title={user?.email}>{user?.email ?? 'BETA LOCAL'}</span>{onSignOut && <button type="button" onClick={onSignOut} title="Sair da conta" aria-label="Sair da conta"><LogOut size={14} /></button>}</div></header><div className="showcase-subnav"><span>{screen === 'GARAGEM' ? 'GARAGEM / CATÁLOGO DE VEÍCULOS' : 'OFICINA / PERSONALIZAÇÃO'}</span><span>{user ? 'CONTA CONECTADA' : 'ALTERAÇÕES SALVAS NESTE DISPOSITIVO'}</span><button onClick={() => setVehiclePickerOpen(true)}><CarFront size={15} /> Veículo atual</button></div>{vehiclePicker}{vehicleSetupModal}</>
+  const renderShowcaseHeader = () => <><header className="showcase-header"><a className="showcase-brand" href="/"><img src="/modlab-logo.png" alt="Modlab" /><strong>MODLAB</strong></a><nav>{['GARAGEM', 'BUILD', 'TUNING', 'MERCADO'].map((item) => <button onClick={() => setScreen(item)} className={item === screen ? 'active' : ''} key={item}>{item}</button>)}</nav><div className="showcase-profile"><i />{user ? <button type="button" className="showcase-profile__account" onClick={() => setScreen('PERFIL')} title="Abrir perfil"><span>{user.email}</span><UserRound size={14} /></button> : <span>BETA LOCAL</span>}{onSignOut && <button type="button" onClick={onSignOut} title="Sair da conta" aria-label="Sair da conta"><LogOut size={14} /></button>}</div></header><div className="showcase-subnav"><span>{screen === 'GARAGEM' ? 'GARAGEM / CATÁLOGO DE VEÍCULOS' : screen === 'PERFIL' ? 'CONTA / PERFIL' : 'OFICINA / PERSONALIZAÇÃO'}</span><span>{user ? 'CONTA CONECTADA' : 'ALTERAÇÕES SALVAS NESTE DISPOSITIVO'}</span>{screen !== 'PERFIL' && <button onClick={() => setVehiclePickerOpen(true)}><CarFront size={15} /> Veículo atual</button>}</div>{vehiclePicker}{vehicleSetupModal}</>
+  if (screen === 'PERFIL' && user) return <section className="showcase-site" aria-label="Perfil"><header className="showcase-header"><a className="showcase-brand" href="/"><img src="/modlab-logo.png" alt="Modlab" /><strong>MODLAB</strong></a><nav>{['GARAGEM', 'BUILD', 'TUNING', 'MERCADO'].map((item) => <button onClick={() => setScreen(item)} key={item}>{item}</button>)}</nav><div className="showcase-profile"><i /><span>{user.email}</span></div></header><ProfilePage user={user} onSignOut={onSignOut} onBack={() => setScreen('TUNING')} /></section>
   if (screen === 'GARAGEM' && garageQuery.trim()) return <section className="showcase-site" aria-label="Resultados de busca da garagem">
     {renderShowcaseHeader()}
     <main className="showcase-search-page">

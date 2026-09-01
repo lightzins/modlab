@@ -35,16 +35,40 @@ main { grid-column: 2; min-width: 0; min-height: 100vh; padding: 34px 34px 42px;
 .auth-card h1 { margin: 11px 0 9px; font-size: 29px; }
 .auth-card > p { margin: 0; color: #b5b5b5; line-height: 1.55; }
 .auth-card form { display: grid; gap: 9px; margin-top: 25px; }
+.auth-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 23px; padding: 4px; border-radius: 9px; background: #111; }
+.auth-tabs button { padding: 9px; border-radius: 6px; color: #aaa; background: transparent; font-size: 12px; }
+.auth-tabs button.active { color: #07150f; background: var(--ml-green, #00f5a0); }
+.auth-input { display: flex; align-items: center; gap: 9px; border: 1px solid rgba(247,247,247,.13); border-radius: 8px; color: #8e9b94; background: #111; }
+.auth-input input { border: 0; background: transparent; }
 .auth-card input { width: 100%; box-sizing: border-box; padding: 13px; border: 1px solid rgba(247,247,247,.13); border-radius: 8px; color: #f7f7f7; background: #111; font: inherit; }
 .auth-card button { padding: 13px; border: 0; border-radius: 8px; color: #0c1410; background: var(--ml-green, #00f5a0); font: inherit; font-weight: 800; cursor: pointer; }
 .auth-card button:disabled { opacity: .7; cursor: wait; }
 .auth-card .auth-message { margin-top: 16px; font-size: 14px; }
 .auth-card .auth-message.success { color: #80e4b3; }
 .auth-card .auth-message.error { color: #ffaaa1; }
+.auth-link { width: auto; margin-top: 15px; padding: 0 !important; color: #9ee3c4 !important; background: transparent !important; font-size: 13px !important; font-weight: 600 !important; }
+
+.profile-page { min-height: calc(100vh - 107px); display: grid; place-items: center; padding: 42px 24px; background: radial-gradient(circle at 70% 10%, rgba(0,245,160,.12), transparent 28%), #111; }
+.profile-card { width: min(100%, 470px); padding: 32px; border: 1px solid rgba(247,247,247,.12); border-radius: 16px; background: #1a1a1a; box-shadow: 0 24px 60px rgba(0,0,0,.32); }
+.profile-card header { text-align: center; }
+.profile-back { margin-bottom: 24px; padding: 0; border: 0; color: #a1a1a1; background: transparent; cursor: pointer; font-size: 12px; }
+.profile-card .eyebrow { margin-bottom: 12px; color: var(--ml-green); }
+.profile-avatar { width: 62px; height: 62px; display: grid; place-items: center; margin: 0 auto 14px; border-radius: 50%; color: #06140e; background: var(--ml-green); font-size: 24px; font-weight: 800; }
+.profile-card h1 { margin: 0 0 8px; font-size: 29px; }
+.profile-card header p { margin: 0; color: #aaa; font-size: 14px; }
+.profile-card form { display: grid; gap: 9px; margin-top: 28px; }
+.profile-card label { color: #d6d6d6; font-size: 12px; font-weight: 700; }
+.profile-card input, .profile-email { width: 100%; min-height: 45px; padding: 12px; border: 1px solid rgba(247,247,247,.13); border-radius: 8px; color: #f7f7f7; background: #111; font: inherit; }
+.profile-email { display: flex; align-items: center; gap: 9px; color: #b5b5b5; font-size: 13px; }
+.profile-card form > button { margin-top: 10px; padding: 13px; border: 0; border-radius: 8px; color: #07150f; background: var(--ml-green); cursor: pointer; font-weight: 800; }
+.profile-card footer { margin-top: 23px; padding-top: 20px; border-top: 1px solid rgba(247,247,247,.1); }
+.profile-card footer button { display: inline-flex; align-items: center; gap: 8px; padding: 0; border: 0; color: #ffaca5; background: transparent; cursor: pointer; font-size: 13px; }
 
 .showcase-profile { max-width: 240px; }
 .showcase-profile > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .showcase-profile > button { display: grid; place-items: center; padding: 5px; border: 0; color: inherit; background: transparent; cursor: pointer; }
+.showcase-profile__account { display: flex !important; align-items: center; gap: 6px; max-width: 205px; overflow: hidden; }
+.showcase-profile__account span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .page-header { width: 720px; max-width: 100%; display: flex; align-items: center; gap: 12px; margin-bottom: 23px; }
 .page-header h1 { margin: 0 0 6px; font-size: 23px; line-height: 1; letter-spacing: -.55px; }
 .page-header p { margin: 0; color: #aaa097; font-size: 10px; }
