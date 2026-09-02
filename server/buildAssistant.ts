@@ -28,7 +28,7 @@ export async function runBuildAssistant(
   history: BuildAssistantMessage[],
   context: BuildAssistantContext,
 ) {
-  const model = process.env.GEMINI_BUILD_MODEL || 'gemini-3.5-flash-lite'
+  const model = process.env.GEMINI_BUILD_MODEL || process.env.GEMINI_MODEL || 'gemini-3.7-flash'
   const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
     method: 'POST',
     headers: { 'x-goog-api-key': apiKey, 'Content-Type': 'application/json' },
