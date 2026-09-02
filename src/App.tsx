@@ -25,6 +25,7 @@ async function getAuthenticatedHeaders() {
 const readableAuthError = (message: string) => {
   const normalized = message.toLowerCase()
   if (normalized.includes('invalid login credentials')) return 'E-mail ou senha incorretos.'
+  if (normalized.includes('email logins are disabled') || normalized.includes('email provider is disabled')) return 'O login por e-mail está desativado no Supabase. Ative o provedor Email para continuar.'
   if (normalized.includes('email not confirmed')) return 'Confirme seu e-mail antes de entrar.'
   if (normalized.includes('already registered') || normalized.includes('already been registered')) return 'Este e-mail já possui uma conta. Tente entrar.'
   if (normalized.includes('password should be at least')) return 'A senha precisa ter pelo menos 6 caracteres.'
