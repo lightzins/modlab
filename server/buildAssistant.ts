@@ -22,6 +22,8 @@ type GeminiResponse = {
 
 export class GeminiRateLimitError extends Error {}
 
+const wait = (milliseconds: number) => new Promise<void>((resolve) => setTimeout(resolve, milliseconds))
+
 export async function runBuildAssistant(
   apiKey: string,
   message: string,
@@ -29,10 +31,7 @@ export async function runBuildAssistant(
   context: BuildAssistantContext,
 ) {
   const model = process.env.GEMINI_BUILD_MODEL || process.env.GEMINI_MODEL || 'gemini-3.7-flash'
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
-    method: 'POST',
-    headers: { 'x-goog-api-key': apiKey, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
+  const requestBody = JSON.stringify({
       systemInstruction: {
         parts: [{ text: [
           'Você é o assistente técnico automotivo do Modlab. Responda em português do Brasil.',
@@ -47,11 +46,20 @@ export async function runBuildAssistant(
         { role: 'user', parts: [{ text: message }] },
       ],
       generationConfig: { temperature: 0.3, maxOutputTokens: 550 },
-    }),
-  })
+    })
+  let response: Response | undefined
+  let payload: GeminiResponse = {}
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+      method: 'POST', headers: { 'x-goog-api-key': apiKey, 'Content-Type': 'application/json' }, body: requestBody,
+    })
+    payload = await response.json() as GeminiResponse
+    const highDemand = response.status === 503 && /high demand|temporarily unavailable/i.test(payload.error?.message ?? '')
+    if (!highDemand || attempt === 1) break
+    await wait(1_500)
+  }
 
-  const payload = await response.json() as GeminiResponse
-  if (!response.ok) {
+  if (!response?.ok) {
     if (response.status === 429) throw new GeminiRateLimitError('Limite temporário da IA atingido. Aguarde alguns minutos antes de tentar novamente.')
     throw new Error(payload.error?.message || 'A IA não conseguiu responder agora.')
   }

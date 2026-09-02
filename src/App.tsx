@@ -531,6 +531,7 @@ function SettingsPage() {
 }
 
 function DesignLab({ user, onSignOut }: { user?: User | null; onSignOut?: () => void }) {
+  const chatStorageKey = user ? `modlab-build-chat:${user.id}` : 'modlab-build-chat:local'
   const [screen, setScreen] = useState('TUNING')
   const [section, setSection] = useState(() => window.localStorage.getItem('modlab-showcase-section') ?? 'Performance')
   const [selected, setSelected] = useState(() => window.localStorage.getItem('modlab-showcase-selected') ?? 'Stage 2 ECU')
@@ -549,7 +550,7 @@ function DesignLab({ user, onSignOut }: { user?: User | null; onSignOut?: () => 
   const [buildChatStatus, setBuildChatStatus] = useState<'idle' | 'loading' | 'unconfigured' | 'error'>('idle')
   const [buildChatError, setBuildChatError] = useState('')
   const [buildChatMessages, setBuildChatMessages] = useState<BuildChatMessage[]>(() => {
-    try { const stored = window.localStorage.getItem('modlab-build-chat'); return stored ? JSON.parse(stored) as BuildChatMessage[] : [] }
+    try { const stored = window.localStorage.getItem(chatStorageKey); return stored ? JSON.parse(stored) as BuildChatMessage[] : [] }
     catch { return [] }
   })
   const buildChatEndRef = useRef<HTMLDivElement>(null)
@@ -577,7 +578,8 @@ function DesignLab({ user, onSignOut }: { user?: User | null; onSignOut?: () => 
     } catch { return seed }
   })
   useEffect(() => { window.localStorage.setItem('modlab-showcase-section', section); window.localStorage.setItem('modlab-showcase-selected', selected); window.localStorage.setItem('modlab-showcase-vehicle', String(vehicleIndex)); window.localStorage.setItem('modlab-showcase-steps', JSON.stringify(buildSteps)); window.localStorage.setItem('modlab-showcase-parts', JSON.stringify(savedParts)); window.localStorage.setItem('modlab-showcase-catalog', JSON.stringify(vehicles)) }, [section, selected, vehicleIndex, buildSteps, savedParts, vehicles])
-  useEffect(() => { window.localStorage.setItem('modlab-build-chat', JSON.stringify(buildChatMessages)); buildChatEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }) }, [buildChatMessages, buildChatStatus])
+  useEffect(() => { window.localStorage.removeItem('modlab-build-chat') }, [])
+  useEffect(() => { window.localStorage.setItem(chatStorageKey, JSON.stringify(buildChatMessages)); buildChatEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }) }, [buildChatMessages, buildChatStatus, chatStorageKey])
   useEffect(() => {
     let cancelled = false
     const hydrateCatalogImages = async () => {
