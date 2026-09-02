@@ -1,4 +1,4 @@
-import { runBuildAssistant, type BuildAssistantContext, type BuildAssistantMessage } from '../server/buildAssistant.js'
+import { GeminiRateLimitError, runBuildAssistant, type BuildAssistantContext, type BuildAssistantMessage } from '../server/buildAssistant.js'
 import { AuthenticationError, requireAuthenticatedUser } from '../server/requireUser.js'
 
 export default async function handler(request: any, response: any) {
@@ -24,6 +24,7 @@ export default async function handler(request: any, response: any) {
     if (!context?.vehicle) return response.status(400).json({ error: 'O contexto do veículo está incompleto.' })
     return response.status(200).json(await runBuildAssistant(apiKey, message, history, context))
   } catch (error) {
+    if (error instanceof GeminiRateLimitError) return response.status(429).json({ error: error.message, code: 'AI_RATE_LIMIT' })
     return response.status(502).json({ error: error instanceof Error ? error.message : 'Falha ao consultar o assistente.' })
   }
 }

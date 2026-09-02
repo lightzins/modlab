@@ -20,13 +20,15 @@ type GeminiResponse = {
   error?: { message?: string }
 }
 
+export class GeminiRateLimitError extends Error {}
+
 export async function runBuildAssistant(
   apiKey: string,
   message: string,
   history: BuildAssistantMessage[],
   context: BuildAssistantContext,
 ) {
-  const model = process.env.GEMINI_BUILD_MODEL || process.env.GEMINI_MODEL || 'gemini-3.7-flash'
+  const model = process.env.GEMINI_BUILD_MODEL || 'gemini-3.5-flash-lite'
   const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
     method: 'POST',
     headers: { 'x-goog-api-key': apiKey, 'Content-Type': 'application/json' },
@@ -41,15 +43,18 @@ export async function runBuildAssistant(
         ].join('\n') }],
       },
       contents: [
-        ...history.slice(-12).map((item) => ({ role: item.role === 'assistant' ? 'model' : 'user', parts: [{ text: item.content }] })),
+        ...history.slice(-4).map((item) => ({ role: item.role === 'assistant' ? 'model' : 'user', parts: [{ text: item.content.slice(0, 1_200) }] })),
         { role: 'user', parts: [{ text: message }] },
       ],
-      generationConfig: { temperature: 0.35, maxOutputTokens: 1200 },
+      generationConfig: { temperature: 0.3, maxOutputTokens: 550 },
     }),
   })
 
   const payload = await response.json() as GeminiResponse
-  if (!response.ok) throw new Error(payload.error?.message || 'A IA não conseguiu responder agora.')
+  if (!response.ok) {
+    if (response.status === 429) throw new GeminiRateLimitError('Limite temporário da IA atingido. Aguarde alguns minutos antes de tentar novamente.')
+    throw new Error(payload.error?.message || 'A IA não conseguiu responder agora.')
+  }
   const answer = payload.candidates?.[0]?.content?.parts?.map((part) => part.text ?? '').join('\n').trim()
   if (!answer) throw new Error('A IA retornou uma resposta vazia.')
   return { message: answer, responseId: undefined, sources: [] as Array<{ title: string; url: string }> }

@@ -28,7 +28,7 @@ const readableAuthError = (message: string) => {
   if (normalized.includes('email not confirmed')) return 'Confirme seu e-mail antes de entrar.'
   if (normalized.includes('already registered') || normalized.includes('already been registered')) return 'Este e-mail já possui uma conta. Tente entrar.'
   if (normalized.includes('password should be at least')) return 'A senha precisa ter pelo menos 6 caracteres.'
-  if (normalized.includes('rate limit')) return 'Muitas tentativas. Aguarde alguns minutos e tente novamente.'
+  if (normalized.includes('rate limit') || normalized.includes('email rate limit')) return 'Muitas tentativas de e-mail. Aguarde alguns minutos antes de tentar novamente.'
   return 'Não foi possível concluir agora. Verifique sua conexão e tente novamente.'
 }
 
