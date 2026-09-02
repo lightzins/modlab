@@ -22,34 +22,64 @@ async function getAuthenticatedHeaders() {
   return { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` }
 }
 
-function LoginPage() {
+const readableAuthError = (message: string) => {
+  const normalized = message.toLowerCase()
+  if (normalized.includes('invalid login credentials')) return 'E-mail ou senha incorretos.'
+  if (normalized.includes('email not confirmed')) return 'Confirme seu e-mail antes de entrar.'
+  if (normalized.includes('already registered') || normalized.includes('already been registered')) return 'Este e-mail já possui uma conta. Tente entrar.'
+  if (normalized.includes('password should be at least')) return 'A senha precisa ter pelo menos 6 caracteres.'
+  if (normalized.includes('rate limit')) return 'Muitas tentativas. Aguarde alguns minutos e tente novamente.'
+  return 'Não foi possível concluir agora. Verifique sua conexão e tente novamente.'
+}
+
+function LoginPage({ recoveryUser, onRecoveryDone }: { recoveryUser?: User | null; onRecoveryDone?: () => void }) {
   const [mode, setMode] = useState<'login' | 'signup'>('login')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [passwordConfirmation, setPasswordConfirmation] = useState('')
   const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
   const [message, setMessage] = useState('')
 
   const submit = async (event: FormEvent) => {
     event.preventDefault()
     if (!supabase || !email.trim() || !password) return
+    if (mode === 'signup' && password !== passwordConfirmation) { setStatus('error'); setMessage('As senhas não são iguais.'); return }
     setStatus('sending')
     setMessage('')
-    const result = mode === 'signup'
-      ? await supabase.auth.signUp({ email: email.trim(), password, options: { data: { full_name: name.trim() }, emailRedirectTo: window.location.origin } })
-      : await supabase.auth.signInWithPassword({ email: email.trim(), password })
-    if (result.error) { setStatus('error'); setMessage(result.error.message); return }
-    setStatus('sent')
-    setMessage(mode === 'signup' && !result.data.session ? 'Conta criada. Confirme seu e-mail para entrar.' : 'Acesso realizado com sucesso.')
+    try {
+      const result = mode === 'signup'
+        ? await supabase.auth.signUp({ email: email.trim(), password, options: { data: { full_name: name.trim() }, emailRedirectTo: window.location.origin } })
+        : await supabase.auth.signInWithPassword({ email: email.trim(), password })
+      if (result.error) { setStatus('error'); setMessage(readableAuthError(result.error.message)); return }
+      setStatus('sent')
+      setMessage(mode === 'signup' && !result.data.session ? 'Conta criada. Confirme seu e-mail para entrar.' : 'Acesso realizado com sucesso.')
+    } catch { setStatus('error'); setMessage('Falha de conexão. Tente novamente em alguns instantes.') }
   }
 
   const resetPassword = async () => {
     if (!supabase || !email.trim()) { setStatus('error'); setMessage('Informe seu e-mail para recuperar a senha.'); return }
     setStatus('sending')
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: window.location.origin })
-    setStatus(error ? 'error' : 'sent')
-    setMessage(error ? error.message : 'Enviamos um link para redefinir sua senha.')
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: window.location.origin })
+      setStatus(error ? 'error' : 'sent')
+      setMessage(error ? readableAuthError(error.message) : 'Enviamos um link para redefinir sua senha.')
+    } catch { setStatus('error'); setMessage('Falha de conexão. Tente novamente em alguns instantes.') }
   }
+
+  const updatePassword = async (event: FormEvent) => {
+    event.preventDefault()
+    if (!supabase || !password) return
+    if (password !== passwordConfirmation) { setStatus('error'); setMessage('As senhas não são iguais.'); return }
+    setStatus('sending')
+    try {
+      const { error } = await supabase.auth.updateUser({ password })
+      setStatus(error ? 'error' : 'sent')
+      setMessage(error ? readableAuthError(error.message) : 'Senha atualizada. Agora você já pode usar sua conta.')
+    } catch { setStatus('error'); setMessage('Falha de conexão. Tente novamente em alguns instantes.') }
+  }
+
+  if (recoveryUser) return <main className="auth-page"><section className="auth-card"><img src="/modlab-logo.png" alt="Modlab" /><span>RECUPERAÇÃO DE SENHA</span><h1>Defina uma nova senha.</h1><p>Escolha uma senha segura para a conta {recoveryUser.email}.</p><form onSubmit={updatePassword}><label htmlFor="new-password">Nova senha</label><div className="auth-input"><KeyRound size={17} /><input id="new-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Mínimo de 6 caracteres" minLength={6} required /></div><label htmlFor="new-password-confirmation">Confirmar nova senha</label><div className="auth-input"><KeyRound size={17} /><input id="new-password-confirmation" type="password" value={passwordConfirmation} onChange={(event) => setPasswordConfirmation(event.target.value)} placeholder="Repita a senha" minLength={6} required /></div><button type="submit" disabled={status === 'sending'}>{status === 'sending' ? 'Salvando...' : 'Salvar nova senha'}</button></form>{status === 'sent' && <><p className="auth-message success">{message}</p><button className="auth-link" type="button" onClick={onRecoveryDone}>Voltar para o Modlab</button></>}{status === 'error' && <p className="auth-message error">{message}</p>}</section></main>
 
   return <main className="auth-page">
     <section className="auth-card">
@@ -57,13 +87,14 @@ function LoginPage() {
       <span>MODLAB / BETA</span>
       <h1>{mode === 'login' ? 'Entre na sua garagem.' : 'Crie sua conta.'}</h1>
       <p>{mode === 'login' ? 'Acesse seus projetos usando e-mail e senha.' : 'Salve suas builds em uma conta pessoal.'}</p>
-      <div className="auth-tabs"><button className={mode === 'login' ? 'active' : ''} type="button" onClick={() => { setMode('login'); setStatus('idle') }}>Entrar</button><button className={mode === 'signup' ? 'active' : ''} type="button" onClick={() => { setMode('signup'); setStatus('idle') }}>Criar conta</button></div>
+      <div className="auth-tabs"><button className={mode === 'login' ? 'active' : ''} type="button" onClick={() => { setMode('login'); setStatus('idle'); setMessage('') }}>Entrar</button><button className={mode === 'signup' ? 'active' : ''} type="button" onClick={() => { setMode('signup'); setStatus('idle'); setMessage('') }}>Criar conta</button></div>
       <form onSubmit={submit}>
         {mode === 'signup' && <><label htmlFor="signup-name">Nome</label><div className="auth-input"><UserRound size={17} /><input id="signup-name" value={name} onChange={(event) => setName(event.target.value)} placeholder="Como quer ser chamado?" required /></div></>}
         <label htmlFor="login-email">E-mail</label>
         <div className="auth-input"><Mail size={17} /><input id="login-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="voce@exemplo.com" required /></div>
         <label htmlFor="login-password">Senha</label>
         <div className="auth-input"><KeyRound size={17} /><input id="login-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Mínimo de 6 caracteres" minLength={6} required /></div>
+        {mode === 'signup' && <><label htmlFor="signup-password-confirmation">Confirmar senha</label><div className="auth-input"><KeyRound size={17} /><input id="signup-password-confirmation" type="password" value={passwordConfirmation} onChange={(event) => setPasswordConfirmation(event.target.value)} placeholder="Repita a senha" minLength={6} required /></div></>}
         <button type="submit" disabled={status === 'sending'}>{status === 'sending' ? 'Aguarde...' : mode === 'login' ? 'Entrar na conta' : 'Criar minha conta'}</button>
       </form>
       {mode === 'login' && <button type="button" className="auth-link" onClick={() => void resetPassword()} disabled={status === 'sending'}>Esqueci minha senha</button>}
@@ -746,6 +777,7 @@ export default function App() {
   const [navOpen, setNavOpen] = useState(false)
   const [authReady, setAuthReady] = useState(!isSupabaseConfigured)
   const [user, setUser] = useState<User | null>(null)
+  const [passwordRecovery, setPasswordRecovery] = useState(false)
   const [activeProjectName, setActiveProjectName] = useState<string>()
   const [projects, setProjects] = useState<GarageProject[]>(() => {
     try { const saved = window.localStorage.getItem('modlab-projects-v2') ?? window.localStorage.getItem('build-lab-projects-v2'); return saved ? JSON.parse(saved) as GarageProject[] : [] }
@@ -760,7 +792,8 @@ export default function App() {
       setUser(session?.user ?? null)
       setAuthReady(true)
     })
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') setPasswordRecovery(true)
       setUser(session?.user ?? null)
       setAuthReady(true)
     })
@@ -828,6 +861,7 @@ export default function App() {
   }
   const introOverlay = <section className={introEntered ? 'site-intro site-intro--hidden' : 'site-intro site-intro--active'} aria-label="Entrada da oficina"><div className="site-intro__panel"><img src="/modlab-logo.png" alt="Modlab" /><span>MODLAB / PERFORMANCE GARAGE</span><h1>Entre na oficina.</h1><button type="button" onClick={() => void enterWorkshop()}>Entrar na oficina <span>↗</span></button></div></section>
   if (!authReady) return <main className="auth-page"><section className="auth-card"><p>Conectando ao Modlab…</p></section></main>
+  if (isSupabaseConfigured && passwordRecovery && user) return <LoginPage recoveryUser={user} onRecoveryDone={() => setPasswordRecovery(false)} />
   if (isSupabaseConfigured && !user) return <LoginPage />
   if (active === 7) return <><audio ref={engineAudioRef} src="/audio/vw-r32-v6.mp3" playsInline preload="auto" />{introOverlay}<DesignLab user={user} onSignOut={isSupabaseConfigured ? signOut : undefined} /></>
   return <><audio ref={engineAudioRef} src="/audio/vw-r32-v6.mp3" playsInline preload="auto" />{introOverlay}<div className="app-shell"><Sidebar active={active} onChange={navigate} open={navOpen} onClose={() => setNavOpen(false)} />{navOpen && <button className="backdrop" onClick={() => setNavOpen(false)} aria-label="Fechar menu" />}<main><header className="page-header"><button className="menu-button" onClick={() => setNavOpen(true)} aria-label="Abrir menu"><Menu size={20} /></button><div><h1>{current.title}</h1>{active !== 1 && <p>{current.description}</p>}</div></header><AppContent active={active} projects={projects} activeProjectName={activeProjectName} onNavigate={navigate} onAddVehicle={addVehicle} onOpenProject={openProject} /></main></div></>
