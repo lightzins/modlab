@@ -554,6 +554,17 @@ function DesignLab({ user, onSignOut }: { user?: User | null; onSignOut?: () => 
     catch { return [] }
   })
   const buildChatEndRef = useRef<HTMLDivElement>(null)
+  const persistChatMessage = async (message: BuildChatMessage) => {
+    if (!supabase || !user) return
+    await supabase.from('ai_conversations').insert({ user_id: user.id, role: message.role, content: message.content, sources: message.sources ?? [] })
+  }
+  const clearBuildChat = async () => {
+    setBuildChatMessages([])
+    setBuildChatStatus('idle')
+    setBuildChatError('')
+    window.localStorage.removeItem(chatStorageKey)
+    if (supabase && user) await supabase.from('ai_conversations').delete().eq('user_id', user.id)
+  }
   const [vehicles, setVehicles] = useState(() => {
     type ShowcaseVehicle = { name: string; tag: string; power: string; progress: string; grade?: string; version?: string; year?: string; image?: string; imageYear?: number }
     const seed = garageCatalog.map((name, index): ShowcaseVehicle => { const featured = cars.find((car) => normalizeText(car.name) === normalizeText(name)); const imageYear = featured ? featuredYears[normalizeText(featured.name)] : undefined; return { name, tag: featured ? `${featured.category} · projeto ${String(index + 1).padStart(2, '0')}` : `Catálogo curado · projeto ${String(index + 1).padStart(2, '0')}`, power: featured ? featured.spec.split(' • ')[0].replace(/[^0-9.]/g, '') : '—', progress: String([42, 28, 17, 12, 8, 5][index % 6]), image: featured?.image, imageYear } })
@@ -580,6 +591,19 @@ function DesignLab({ user, onSignOut }: { user?: User | null; onSignOut?: () => 
   useEffect(() => { window.localStorage.setItem('modlab-showcase-section', section); window.localStorage.setItem('modlab-showcase-selected', selected); window.localStorage.setItem('modlab-showcase-vehicle', String(vehicleIndex)); window.localStorage.setItem('modlab-showcase-steps', JSON.stringify(buildSteps)); window.localStorage.setItem('modlab-showcase-parts', JSON.stringify(savedParts)); window.localStorage.setItem('modlab-showcase-catalog', JSON.stringify(vehicles)) }, [section, selected, vehicleIndex, buildSteps, savedParts, vehicles])
   useEffect(() => { window.localStorage.removeItem('modlab-build-chat') }, [])
   useEffect(() => { window.localStorage.setItem(chatStorageKey, JSON.stringify(buildChatMessages)); buildChatEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }) }, [buildChatMessages, buildChatStatus, chatStorageKey])
+  useEffect(() => {
+    if (!supabase || !user) return
+    let active = true
+    void supabase.from('ai_conversations').select('id, role, content, sources').eq('user_id', user.id).order('created_at', { ascending: true }).limit(100).then(({ data, error }) => {
+      if (!active || error || !data) return
+      setBuildChatMessages(data.flatMap((item: { id: string; role: string; content: string; sources?: unknown }) => {
+        if ((item.role !== 'user' && item.role !== 'assistant') || typeof item.content !== 'string') return []
+        const sources = Array.isArray(item.sources) ? item.sources.filter((source): source is { title: string; url: string } => Boolean(source && typeof source === 'object' && typeof (source as { title?: unknown }).title === 'string' && typeof (source as { url?: unknown }).url === 'string')) : undefined
+        return [{ id: item.id, role: item.role, content: item.content, sources }]
+      }))
+    })
+    return () => { active = false }
+  }, [user?.id])
   useEffect(() => {
     let cancelled = false
     const hydrateCatalogImages = async () => {
@@ -635,6 +659,7 @@ function DesignLab({ user, onSignOut }: { user?: User | null; onSignOut?: () => 
     if (!message || buildChatStatus === 'loading') return
     const userMessage: BuildChatMessage = { id: `${Date.now()}-user`, role: 'user', content: message }
     setBuildChatMessages((items) => [...items, userMessage])
+    void persistChatMessage(userMessage)
     setBuildChatInput('')
     setBuildChatStatus('loading')
     setBuildChatError('')
@@ -665,7 +690,9 @@ function DesignLab({ user, onSignOut }: { user?: User | null; onSignOut?: () => 
         setBuildChatError(payload.error || 'Não foi possível consultar a IA agora.')
         return
       }
-      setBuildChatMessages((items) => [...items, { id: `${Date.now()}-assistant`, role: 'assistant', content: payload.message || 'Não recebi conteúdo para esta resposta.', sources: payload.sources }])
+      const assistantMessage: BuildChatMessage = { id: `${Date.now()}-assistant`, role: 'assistant', content: payload.message || 'Não recebi conteúdo para esta resposta.', sources: payload.sources }
+      setBuildChatMessages((items) => [...items, assistantMessage])
+      void persistChatMessage(assistantMessage)
       setBuildChatStatus('idle')
     } catch {
       setBuildChatStatus('error')
@@ -726,7 +753,7 @@ function DesignLab({ user, onSignOut }: { user?: User | null; onSignOut?: () => 
       <header className="build-ai-head"><div><span className="eyebrow">MODLAB AI / BUILD COPILOT</span><h1>Construa com<br /><i>inteligência.</i></h1><p>Converse com a IA para transformar sua ideia em um plano técnico por etapas.</p></div><button onClick={() => setScreen('TUNING')}><Wrench size={16} /> Ajustar build</button></header>
       <section className="build-ai-layout">
         <section className="build-ai-chat" aria-label="Chat com assistente automotivo">
-          <header className="build-ai-chat__header"><span><Bot size={17} /></span><div><strong>Assistente técnico</strong><small><i className={buildChatStatus === 'error' || buildChatStatus === 'unconfigured' ? 'warning' : ''} /> {buildChatStatus === 'loading' ? 'ANALISANDO SUA BUILD' : buildChatStatus === 'unconfigured' ? 'CONFIGURAÇÃO NECESSÁRIA' : 'PRONTO PARA PLANEJAR'}</small></div>{buildChatMessages.length > 0 && <button aria-label="Limpar conversa" title="Limpar conversa" onClick={() => { setBuildChatMessages([]); setBuildChatStatus('idle'); setBuildChatError('') }}><Trash2 size={15} /></button>}</header>
+          <header className="build-ai-chat__header"><span><Bot size={17} /></span><div><strong>Assistente técnico</strong><small><i className={buildChatStatus === 'error' || buildChatStatus === 'unconfigured' ? 'warning' : ''} /> {buildChatStatus === 'loading' ? 'ANALISANDO SUA BUILD' : buildChatStatus === 'unconfigured' ? 'CONFIGURAÇÃO NECESSÁRIA' : 'PRONTO PARA PLANEJAR'}</small></div>{buildChatMessages.length > 0 && <button aria-label="Limpar conversa" title="Limpar conversa" onClick={() => void clearBuildChat()}><Trash2 size={15} /></button>}</header>
           <div className="build-ai-messages">
             {buildChatMessages.length === 0 && <div className="build-ai-empty"><span><Sparkles size={24} /></span><small>SEU COPILOTO DE PROJETO</small><h2>O que você quer construir?</h2><p>Eu já conheço o veículo e as escolhas desta build. Diga o objetivo, o uso e quanto pretende investir.</p><div>{['Monte uma build confiável', 'Priorize desempenho de rua', 'Planeje por etapas', 'Revise meu orçamento'].map((suggestion) => <button key={suggestion} onClick={() => useBuildSuggestion(suggestion)}>{suggestion}<ChevronRight size={14} /></button>)}</div></div>}
             {buildChatMessages.map((message) => <article className={`build-message ${message.role}`} key={message.id}><header>{message.role === 'assistant' ? <><Bot size={13} /> MODLAB IA</> : 'VOCÊ'}</header><p>{message.content}</p>{message.sources && message.sources.length > 0 && <footer><span>FONTES</span>{message.sources.map((source) => <a href={source.url} target="_blank" rel="noreferrer" key={source.url}>{source.title}</a>)}</footer>}</article>)}
