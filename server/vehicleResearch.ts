@@ -21,7 +21,7 @@ export type VehicleResearchResult = {
 }
 
 type GeminiResponse = {
-  candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>
+  candidates?: Array<{ content?: { parts?: Array<{ text?: string }> }; groundingMetadata?: { groundingChunks?: Array<{ web?: { uri?: string; title?: string } }> } }>
   error?: { message?: string }
 }
 
@@ -34,10 +34,7 @@ const emptyResult = (id: string, note: string): VehicleResearchResult => ({
 export async function researchVehicleSpecs(apiKey: string, vehicles: VehicleResearchInput[]) {
   const requestedVehicles = vehicles.slice(0, 6)
   const model = process.env.GEMINI_VEHICLE_MODEL || process.env.GEMINI_MODEL || 'gemini-3.7-flash'
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
-    method: 'POST',
-    headers: { 'x-goog-api-key': apiKey, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
+  const requestBody = {
       contents: [{ parts: [{ text: [
         'Responda somente JSON válido, sem markdown, no formato {"vehicles":[...]}.',
         'Para cada veículo, inclua: id, version, engine, horsepowerCv, torqueNm, zeroToHundredSeconds, topSpeedKmh, sourceUrl, sourceTitle, confidence, note.',
@@ -46,11 +43,22 @@ export async function researchVehicleSpecs(apiKey: string, vehicles: VehicleRese
         'Nunca invente números ou fontes. Responda em português do Brasil.',
         `Veículos: ${JSON.stringify(requestedVehicles)}`,
       ].join('\n') }] }],
+      tools: [{ google_search: {} }],
       generationConfig: { responseMimeType: 'application/json', temperature: 0.1, maxOutputTokens: 900 },
-    }),
+  }
+  let response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+    method: 'POST', headers: { 'x-goog-api-key': apiKey, 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody),
   })
 
-  const payload = await response.json() as GeminiResponse
+  let payload = await response.json() as GeminiResponse
+  if (!response.ok && /google search|grounding|tool/i.test(payload.error?.message ?? '')) {
+    delete (requestBody as { tools?: unknown }).tools
+    response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+      method: 'POST', headers: { 'x-goog-api-key': apiKey, 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody),
+    })
+    payload = await response.json() as GeminiResponse
+  }
+
   if (!response.ok) throw new Error(payload.error?.message || 'Falha ao consultar a pesquisa automotiva.')
   const output = payload.candidates?.[0]?.content?.parts?.map((part) => part.text ?? '').join('').trim()
   if (!output) throw new Error('A pesquisa não retornou dados estruturados.')
@@ -58,7 +66,11 @@ export async function researchVehicleSpecs(apiKey: string, vehicles: VehicleRese
   try {
     const parsed = JSON.parse(output) as { vehicles?: VehicleResearchResult[] }
     const byId = new Map((parsed.vehicles ?? []).filter((item) => item?.id).map((item) => [item.id, item]))
-    return { vehicles: requestedVehicles.map((vehicle) => byId.get(vehicle.id) ?? emptyResult(vehicle.id, 'A IA não retornou uma ficha confirmada para este veículo.')) }
+    const groundedSource = payload.candidates?.[0]?.groundingMetadata?.groundingChunks?.map((chunk) => chunk.web).find((web): web is { uri: string; title?: string } => Boolean(web?.uri))
+    return { vehicles: requestedVehicles.map((vehicle) => {
+      const result = byId.get(vehicle.id) ?? emptyResult(vehicle.id, 'A IA não retornou uma ficha confirmada para este veículo.')
+      return { ...result, sourceUrl: result.sourceUrl ?? groundedSource?.uri ?? null, sourceTitle: result.sourceTitle ?? groundedSource?.title ?? null }
+    }) }
   } catch {
     throw new Error('A IA retornou uma ficha em formato inválido.')
   }

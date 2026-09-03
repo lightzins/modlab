@@ -15,6 +15,7 @@ type VehicleSpecs = { version: string | null; engine: string | null; horsepowerC
 type VehicleSearchResult = { id: string; make: string; model: string; year: number; yearLabel?: string; image?: string; description?: string; imageYearMatched?: boolean; imageLabel?: string; featured?: Car; specs?: VehicleSpecs }
 type GarageProject = { car: Car; name: string; status: string; progress: number; updated: string }
 type BuildChatMessage = { id: string; role: 'user' | 'assistant'; content: string; sources?: Array<{ title: string; url: string }> }
+type MarketPart = { id: string; name: string; category: string; supplier: string; price: number; url?: string; saved: boolean; type?: string }
 
 async function getAuthenticatedHeaders() {
   const { data: { session } } = await supabase?.auth.getSession() ?? { data: { session: null } }
@@ -532,12 +533,15 @@ function SettingsPage() {
 
 function DesignLab({ user, onSignOut }: { user?: User | null; onSignOut?: () => void }) {
   const chatStorageKey = user ? `modlab-build-chat:${user.id}` : 'modlab-build-chat:local'
-  const [screen, setScreen] = useState('TUNING')
+  const betaStorageScope = user?.id ?? 'local'
+  const [screen, setScreen] = useState('GARAGEM')
   const [section, setSection] = useState(() => window.localStorage.getItem('modlab-showcase-section') ?? 'Performance')
-  const [selected, setSelected] = useState(() => window.localStorage.getItem('modlab-showcase-selected') ?? 'Stage 2 ECU')
+  const [selected, setSelected] = useState(() => window.localStorage.getItem('modlab-showcase-selected') ?? '')
   const [vehicleIndex, setVehicleIndex] = useState(() => Number(window.localStorage.getItem('modlab-showcase-vehicle') ?? '0'))
-  const [buildSteps, setBuildSteps] = useState<boolean[]>(() => { try { const stored = window.localStorage.getItem('modlab-showcase-steps'); return stored ? JSON.parse(stored) as boolean[] : [true, true, false, false] } catch { return [true, true, false, false] } })
-  const [savedParts, setSavedParts] = useState<string[]>(() => { try { const stored = window.localStorage.getItem('modlab-showcase-parts'); return stored ? JSON.parse(stored) as string[] : [] } catch { return [] } })
+  const [buildSteps, setBuildSteps] = useState<boolean[]>([false, false, false, false])
+  const [savedParts, setSavedParts] = useState<string[]>(() => { try { const stored = window.localStorage.getItem(`modlab-beta-saved-parts:${betaStorageScope}`); return stored ? JSON.parse(stored) as string[] : [] } catch { return [] } })
+  const [marketParts, setMarketParts] = useState<MarketPart[]>(() => { try { const stored = window.localStorage.getItem(`modlab-beta-parts:${betaStorageScope}`); return stored ? JSON.parse(stored) as MarketPart[] : [] } catch { return [] } })
+  const [partForm, setPartForm] = useState({ name: '', category: '', supplier: '', price: '', url: '' })
   const [configurationSaved, setConfigurationSaved] = useState(false)
   const [vehiclePickerOpen, setVehiclePickerOpen] = useState(false)
   const [vehicleSetupIndex, setVehicleSetupIndex] = useState<number | null>(null)
@@ -567,28 +571,14 @@ function DesignLab({ user, onSignOut }: { user?: User | null; onSignOut?: () => 
   }
   const [vehicles, setVehicles] = useState(() => {
     type ShowcaseVehicle = { name: string; tag: string; power: string; progress: string; grade?: string; version?: string; year?: string; image?: string; imageYear?: number }
-    const seed = garageCatalog.map((name, index): ShowcaseVehicle => { const featured = cars.find((car) => normalizeText(car.name) === normalizeText(name)); const imageYear = featured ? featuredYears[normalizeText(featured.name)] : undefined; return { name, tag: featured ? `${featured.category} · projeto ${String(index + 1).padStart(2, '0')}` : `Catálogo curado · projeto ${String(index + 1).padStart(2, '0')}`, power: featured ? featured.spec.split(' • ')[0].replace(/[^0-9.]/g, '') : '—', progress: String([42, 28, 17, 12, 8, 5][index % 6]), image: featured?.image, imageYear } })
     try {
-      const stored = window.localStorage.getItem('modlab-showcase-catalog')
-      if (!stored) return seed
-      const existing = (JSON.parse(stored) as ShowcaseVehicle[]).map((item) => {
-        const normalizedItem = item.tag.includes('potência base consultada') ? { ...item, power: '—', tag: item.tag.replace(' · potência base consultada', '') } : item
-        const verifiedImage = verifiedVehicleImages[normalizeText(`${normalizedItem.name} ${normalizedItem.year ?? ''}`)]
-        return { ...normalizedItem, image: verifiedImage ?? highResolutionImage(normalizedItem.image) }
-      })
-      const merged = seed.map((item) => {
-        const saved = existing.find((candidate) => normalizeText(candidate.name) === normalizeText(item.name))
-        return saved ? { ...item, ...saved, imageYear: saved.imageYear ?? item.imageYear } : item
-      })
-      const extras = existing.filter((saved) => !merged.some((item) => normalizeText(item.name) === normalizeText(saved.name))).map((saved) => {
-        const featured = cars.find((car) => normalizeText(car.name) === normalizeText(saved.name))
-        const imageYear = saved.imageYear ?? (featured ? featuredYears[normalizeText(featured.name)] : undefined)
-        return { ...saved, image: saved.image ?? featured?.image, imageYear }
-      })
-      return removeDuplicateVehicleImages([...merged, ...extras])
-    } catch { return seed }
+      const stored = window.localStorage.getItem(`modlab-beta-vehicles:${betaStorageScope}`)
+      return stored ? removeDuplicateVehicleImages(JSON.parse(stored) as ShowcaseVehicle[]) : []
+    } catch { return [] }
   })
-  useEffect(() => { window.localStorage.setItem('modlab-showcase-section', section); window.localStorage.setItem('modlab-showcase-selected', selected); window.localStorage.setItem('modlab-showcase-vehicle', String(vehicleIndex)); window.localStorage.setItem('modlab-showcase-steps', JSON.stringify(buildSteps)); window.localStorage.setItem('modlab-showcase-parts', JSON.stringify(savedParts)); window.localStorage.setItem('modlab-showcase-catalog', JSON.stringify(vehicles)) }, [section, selected, vehicleIndex, buildSteps, savedParts, vehicles])
+  useEffect(() => { window.localStorage.removeItem('modlab-showcase-catalog'); window.localStorage.removeItem('modlab-showcase-parts') }, [])
+  useEffect(() => { window.localStorage.setItem('modlab-showcase-section', section); window.localStorage.setItem('modlab-showcase-selected', selected); window.localStorage.setItem('modlab-showcase-vehicle', String(vehicleIndex)); window.localStorage.setItem('modlab-showcase-steps', JSON.stringify(buildSteps)); window.localStorage.setItem(`modlab-beta-vehicles:${betaStorageScope}`, JSON.stringify(vehicles)) }, [section, selected, vehicleIndex, buildSteps, vehicles, betaStorageScope])
+  useEffect(() => { window.localStorage.setItem(`modlab-beta-saved-parts:${betaStorageScope}`, JSON.stringify(savedParts)); window.localStorage.setItem(`modlab-beta-parts:${betaStorageScope}`, JSON.stringify(marketParts)) }, [savedParts, marketParts, betaStorageScope])
   useEffect(() => { window.localStorage.removeItem('modlab-build-chat') }, [])
   useEffect(() => { window.localStorage.setItem(chatStorageKey, JSON.stringify(buildChatMessages)); buildChatEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }) }, [buildChatMessages, buildChatStatus, chatStorageKey])
   useEffect(() => {
@@ -633,7 +623,7 @@ function DesignLab({ user, onSignOut }: { user?: User | null; onSignOut?: () => 
   }
   const current = options[section as keyof typeof options]
   const Icon = current.icon
-  const vehicle = vehicles[vehicleIndex] ?? vehicles[0]
+  const vehicle = vehicles[vehicleIndex] ?? vehicles[0] ?? { name: 'Nenhum veículo selecionado', tag: 'Pesquise e adicione um veículo para começar.', power: '—', progress: '0' }
   const selectVehicle = (index: number) => { setVehicleIndex(index); setVehiclePickerOpen(false); setScreen('TUNING') }
   const openVehicleSetup = (index: number) => {
     const candidate = vehicles[index]
@@ -650,8 +640,18 @@ function DesignLab({ user, onSignOut }: { user?: User | null; onSignOut?: () => 
     setVehiclePickerOpen(false)
     setScreen('TUNING')
   }
-  const marketParts = [{ name: 'Kit freios carbono', type: 'FREIOS · 410 MM', price: 'R$ 28.700', supplier: 'Apex Performance' }, { name: 'Coilover Clubsport', type: 'SUSPENSÃO · AJUSTÁVEL', price: 'R$ 12.400', supplier: 'Trackline Garage' }, { name: 'Escape valvulado', type: 'ESCAPE · TITÂNIO', price: 'R$ 18.200', supplier: 'Ferrovia Motorsport' }]
-  const totalSaved = savedParts.reduce((sum, partName) => sum + Number(marketParts.find((part) => part.name === partName)?.price.replace(/[^0-9]/g, '') ?? 0), 0)
+  const totalSaved = savedParts.reduce((sum, partId) => sum + (marketParts.find((part) => part.id === partId)?.price ?? 0), 0)
+  const addMarketPart = (event: FormEvent) => {
+    event.preventDefault()
+    const name = partForm.name.trim()
+    const price = Number(partForm.price.replace(',', '.'))
+    if (!name || !Number.isFinite(price) || price < 0) return
+    const id = typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`
+    setMarketParts((items) => [...items, { id, name, category: partForm.category.trim() || 'Sem categoria', supplier: partForm.supplier.trim() || 'Fornecedor não informado', price, url: partForm.url.trim() || undefined, saved: false }])
+    setPartForm({ name: '', category: '', supplier: '', price: '', url: '' })
+  }
+  const toggleSavedPart = (partId: string) => setSavedParts((items) => items.includes(partId) ? items.filter((id) => id !== partId) : [...items, partId])
+  const deleteMarketPart = (partId: string) => { setMarketParts((items) => items.filter((part) => part.id !== partId)); setSavedParts((items) => items.filter((id) => id !== partId)) }
   const saveConfiguration = () => { setConfigurationSaved(true); window.setTimeout(() => setConfigurationSaved(false), 1800) }
   const sendBuildMessage = async (event: FormEvent) => {
     event.preventDefault()
@@ -676,7 +676,7 @@ function DesignLab({ user, onSignOut }: { user?: User | null; onSignOut?: () => 
             year: vehicle.year,
             basePower: vehicle.power,
             selectedTune: selected,
-            savedParts,
+            savedParts: marketParts.filter((part) => savedParts.includes(part.id)).map((part) => part.name),
             estimatedBudget: savedParts.length ? currency.format(totalSaved) : 'Não definido',
             completedSteps: buildSteps.filter(Boolean).length,
             totalSteps: buildSteps.length,
@@ -707,7 +707,13 @@ function DesignLab({ user, onSignOut }: { user?: User | null; onSignOut?: () => 
     setSearchingGarage(true)
     try {
       const results = await searchVehicles(query)
-      const additions = results.map((result) => ({ name: `${result.make} ${result.model}`, tag: 'Busca pública · configurar veículo', power: '—', progress: '0', image: result.image, imageYear: undefined }))
+      const response = results.length ? await fetch('/api/vehicle-specs', { method: 'POST', headers: await getAuthenticatedHeaders(), body: JSON.stringify({ vehicles: results.slice(0, 6).map((result) => ({ id: result.id, make: result.make, model: result.model, year: result.year })) }) }).catch(() => undefined) : undefined
+      const researched = response?.ok ? await response.json() as { vehicles?: Array<VehicleSpecs & { id: string }> } : undefined
+      const specsById = new Map((researched?.vehicles ?? []).map((spec) => [spec.id, spec]))
+      const additions = results.map((result) => {
+        const specs = specsById.get(result.id)
+        return { name: `${result.make} ${result.model}`, tag: specs?.engine ? `${specs.engine} · dados pesquisados na web` : 'Busca pública · configurar veículo', power: specs?.horsepowerCv ? String(specs.horsepowerCv) : '—', progress: '0', image: result.image, imageYear: undefined, version: specs?.version ?? undefined, year: result.year ? String(result.year) : undefined }
+      })
       setVehicles((currentVehicles) => additions.reduce((nextVehicles, addition) => {
         const existingIndex = nextVehicles.findIndex((currentVehicle) => normalizeText(currentVehicle.name) === normalizeText(addition.name))
         if (existingIndex < 0) return [...nextVehicles, addition]
@@ -722,7 +728,7 @@ function DesignLab({ user, onSignOut }: { user?: User | null; onSignOut?: () => 
   const vehicleSetup = vehicleSetupIndex === null ? null : vehicles[vehicleSetupIndex]
   const vehicleSetupModal = vehicleSetup ? <div className="vehicle-picker-backdrop" role="dialog" aria-modal="true" aria-label="Configurar veículo"><form className="vehicle-setup" onSubmit={confirmVehicleSetup}><header><div><span className="eyebrow">ETAPA 02 / 02</span><h2>Defina seu carro.</h2><p>{vehicleSetup.name} foi selecionado. Informe a versão e o ano para iniciar uma build coerente.</p></div><button type="button" aria-label="Fechar" onClick={() => setVehicleSetupIndex(null)}><X size={18} /></button></header><div className="vehicle-setup__vehicle">{vehicleSetup.image ? <img src={vehicleSetup.image} alt="" /> : <span><ImageOff size={22} /></span>}<strong>{vehicleSetup.name}</strong></div><label>VERSÃO / MODELO<input value={vehicleVersion} onChange={(event) => setVehicleVersion(event.target.value)} placeholder="Ex.: Touring 1.5 Turbo" autoFocus required /></label><label>ANO DO VEÍCULO<input inputMode="numeric" pattern="[0-9]{4}" min="1950" max="2030" value={vehicleYear} onChange={(event) => setVehicleYear(event.target.value.replace(/[^0-9]/g, '').slice(0, 4))} placeholder="Ex.: 2020" required /></label><footer><span>Os dados servem para filtrar peças e confirmar especificações depois.</span><button type="submit">Continuar para a oficina <ChevronRight size={16} /></button></footer></form></div> : null
   const vehiclePicker = vehiclePickerOpen ? <div className="vehicle-picker-backdrop" role="dialog" aria-modal="true" aria-label="Trocar veículo"><section className="vehicle-picker"><header><div><span className="eyebrow">GARAGEM MODLAB</span><h2>Escolha seu veículo</h2><p>Selecione um projeto e confirme versão e ano antes de personalizar.</p></div><button aria-label="Fechar seletor" onClick={() => setVehiclePickerOpen(false)}><X size={18} /></button></header><div className="vehicle-picker__list">{vehicles.slice(0, 12).map((car, index) => <button className={vehicleIndex === index ? 'selected' : ''} key={car.name} onClick={() => openVehicleSetup(index)}>{car.image ? <img src={car.image} alt="" /> : <span><ImageOff size={16} /></span>}<div><small>MODELO {String(index + 1).padStart(3, '0')}</small><strong>{car.name}</strong><em>{car.version && car.year ? `${car.version} · ${car.year}` : 'Informe versão e ano'}</em></div>{vehicleIndex === index && <Check size={16} />}</button>)}</div><footer><button onClick={() => { setVehiclePickerOpen(false); setScreen('GARAGEM') }}><Search size={15} /> Ver catálogo completo</button><span>{vehicles.length} modelos no catálogo local</span></footer></section></div> : null
-  const renderShowcaseHeader = () => <><header className="showcase-header"><a className="showcase-brand" href="/"><img src="/modlab-logo.png" alt="Modlab" /><strong>MODLAB</strong></a><nav>{['GARAGEM', 'BUILD', 'TUNING', 'MERCADO'].map((item) => <button onClick={() => setScreen(item)} className={item === screen ? 'active' : ''} key={item}>{item}</button>)}</nav><div className="showcase-profile"><i />{user ? <><span title={user.email}>{user.email}</span><button type="button" className="showcase-profile__account" onClick={() => setScreen('PERFIL')} title="Abrir perfil" aria-label="Abrir perfil"><UserRound size={15} /></button></> : <span>BETA LOCAL</span>}{onSignOut && <button type="button" onClick={onSignOut} title="Sair da conta" aria-label="Sair da conta"><LogOut size={14} /></button>}</div></header><div className="showcase-subnav"><span>{screen === 'GARAGEM' ? 'GARAGEM / CATÁLOGO DE VEÍCULOS' : screen === 'PERFIL' ? 'CONTA / PERFIL' : 'OFICINA / PERSONALIZAÇÃO'}</span><span>{user ? 'CONTA CONECTADA' : 'ALTERAÇÕES SALVAS NESTE DISPOSITIVO'}</span>{screen !== 'PERFIL' && <button onClick={() => setVehiclePickerOpen(true)}><CarFront size={15} /> Veículo atual</button>}</div>{vehiclePicker}{vehicleSetupModal}</>
+  const renderShowcaseHeader = () => <><header className="showcase-header"><a className="showcase-brand" href="/"><img src="/modlab-logo.png" alt="Modlab" /><strong>MODLAB</strong></a><nav>{['GARAGEM', 'BUILD', 'TUNING', 'MERCADO'].map((item) => <button onClick={() => setScreen(vehicles.length || item === 'GARAGEM' ? item : 'GARAGEM')} className={item === screen ? 'active' : ''} key={item}>{item}</button>)}</nav><div className="showcase-profile"><i />{user ? <><span title={user.email}>{user.email}</span><button type="button" className="showcase-profile__account" onClick={() => setScreen('PERFIL')} title="Abrir perfil" aria-label="Abrir perfil"><UserRound size={15} /></button></> : <span>BETA LOCAL</span>}{onSignOut && <button type="button" onClick={onSignOut} title="Sair da conta" aria-label="Sair da conta"><LogOut size={14} /></button>}</div></header><div className="showcase-subnav"><span>{screen === 'GARAGEM' ? 'GARAGEM / CATÁLOGO DE VEÍCULOS' : screen === 'PERFIL' ? 'CONTA / PERFIL' : 'OFICINA / PERSONALIZAÇÃO'}</span><span>{user ? 'CONTA CONECTADA' : 'ALTERAÇÕES SALVAS NESTE DISPOSITIVO'}</span>{screen !== 'PERFIL' && <button onClick={() => setVehiclePickerOpen(true)}><CarFront size={15} /> Veículo atual</button>}</div>{vehiclePicker}{vehicleSetupModal}</>
   if (screen === 'PERFIL' && user) return <section className="showcase-site" aria-label="Perfil"><header className="showcase-header"><a className="showcase-brand" href="/"><img src="/modlab-logo.png" alt="Modlab" /><strong>MODLAB</strong></a><nav>{['GARAGEM', 'BUILD', 'TUNING', 'MERCADO'].map((item) => <button onClick={() => setScreen(item)} key={item}>{item}</button>)}</nav><div className="showcase-profile"><i /><span>{user.email}</span></div></header><ProfilePage user={user} onSignOut={onSignOut} onBack={() => setScreen('TUNING')} /></section>
   if (screen === 'GARAGEM' && garageQuery.trim()) return <section className="showcase-site" aria-label="Resultados de busca da garagem">
     {renderShowcaseHeader()}
@@ -755,21 +761,21 @@ function DesignLab({ user, onSignOut }: { user?: User | null; onSignOut?: () => 
         <section className="build-ai-chat" aria-label="Chat com assistente automotivo">
           <header className="build-ai-chat__header"><span><Bot size={17} /></span><div><strong>Assistente técnico</strong><small><i className={buildChatStatus === 'error' || buildChatStatus === 'unconfigured' ? 'warning' : ''} /> {buildChatStatus === 'loading' ? 'ANALISANDO SUA BUILD' : buildChatStatus === 'unconfigured' ? 'CONFIGURAÇÃO NECESSÁRIA' : 'PRONTO PARA PLANEJAR'}</small></div>{buildChatMessages.length > 0 && <button aria-label="Limpar conversa" title="Limpar conversa" onClick={() => void clearBuildChat()}><Trash2 size={15} /></button>}</header>
           <div className="build-ai-messages">
-            {buildChatMessages.length === 0 && <div className="build-ai-empty"><span><Sparkles size={24} /></span><small>SEU COPILOTO DE PROJETO</small><h2>O que você quer construir?</h2><p>Eu já conheço o veículo e as escolhas desta build. Diga o objetivo, o uso e quanto pretende investir.</p><div>{['Monte uma build confiável', 'Priorize desempenho de rua', 'Planeje por etapas', 'Revise meu orçamento'].map((suggestion) => <button key={suggestion} onClick={() => useBuildSuggestion(suggestion)}>{suggestion}<ChevronRight size={14} /></button>)}</div></div>}
+            {buildChatMessages.length === 0 && <div className="build-ai-empty"><span><Sparkles size={24} /></span><small>SEU COPILOTO DE PROJETO</small><h2>Comece sua primeira conversa.</h2><p>Descreva o objetivo da build, o uso do carro e o orçamento disponível.</p></div>}
             {buildChatMessages.map((message) => <article className={`build-message ${message.role}`} key={message.id}><header>{message.role === 'assistant' ? <><Bot size={13} /> MODLAB IA</> : 'VOCÊ'}</header><p>{message.content}</p>{message.sources && message.sources.length > 0 && <footer><span>FONTES</span>{message.sources.map((source) => <a href={source.url} target="_blank" rel="noreferrer" key={source.url}>{source.title}</a>)}</footer>}</article>)}
             {buildChatStatus === 'loading' && <div className="build-ai-thinking"><LoaderCircle size={15} /> Pesquisando e organizando a recomendação...</div>}
             {(buildChatStatus === 'unconfigured' || buildChatStatus === 'error') && <div className="build-ai-alert"><ShieldCheck size={16} /><div><strong>{buildChatStatus === 'unconfigured' ? 'Conecte a IA para continuar' : 'Não foi possível responder'}</strong><span>{buildChatError}</span></div></div>}
             <div ref={buildChatEndRef} />
           </div>
-          <form className="build-ai-composer" onSubmit={sendBuildMessage}><textarea rows={2} value={buildChatInput} onChange={(event) => setBuildChatInput(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit() } }} placeholder="Ex.: Quero uma build de rua confiável com até R$ 30 mil..." aria-label="Mensagem para o assistente" /><button type="submit" disabled={!buildChatInput.trim() || buildChatStatus === 'loading'} aria-label="Enviar mensagem">{buildChatStatus === 'loading' ? <LoaderCircle size={17} /> : <Send size={17} />}</button><small>A IA pode errar. Confirme peças e serviços com um profissional.</small></form>
+          <form className="build-ai-composer" onSubmit={sendBuildMessage}><textarea rows={2} value={buildChatInput} onChange={(event) => setBuildChatInput(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); event.currentTarget.form?.requestSubmit() } }} placeholder="Descreva o objetivo, uso e orçamento da sua build..." aria-label="Mensagem para o assistente" /><button type="submit" disabled={!buildChatInput.trim() || buildChatStatus === 'loading'} aria-label="Enviar mensagem">{buildChatStatus === 'loading' ? <LoaderCircle size={17} /> : <Send size={17} />}</button><small>A IA pode errar. Confirme peças e serviços com um profissional.</small></form>
         </section>
         <aside className="build-ai-context"><header><span>CONTEXTO DA BUILD</span><small>ENVIADO À IA</small></header><div className="build-ai-vehicle">{vehicle.image ? <img src={vehicle.image} alt={vehicle.name} /> : <span><CarFront size={22} /></span>}<div><small>VEÍCULO ATUAL</small><strong>{vehicle.name}</strong><em>{vehicle.version && vehicle.year ? `${vehicle.version} · ${vehicle.year}` : 'Versão e ano pendentes'}</em></div></div><dl><div><dt>OBJETIVO</dt><dd>{selected}</dd></div><div><dt>PEÇAS SALVAS</dt><dd>{savedParts.length || 'Nenhuma'}</dd></div><div><dt>ORÇAMENTO</dt><dd>{savedParts.length ? currency.format(totalSaved) : 'Não definido'}</dd></div><div><dt>PROGRESSO</dt><dd className="green">{buildSteps.filter(Boolean).length * 25}%</dd></div></dl>{!vehicle.version || !vehicle.year ? <button className="build-ai-context__primary" onClick={() => setVehiclePickerOpen(true)}>Completar dados do veículo <ChevronRight size={15} /></button> : <button className="build-ai-context__primary" onClick={() => setScreen('MERCADO')}>Explorar componentes <ChevronRight size={15} /></button>}<p><ShieldCheck size={14} /> Recomendações consideram segurança e confiabilidade, mas não substituem inspeção técnica.</p></aside>
       </section>
     </main>
   </section>
-  if (screen === 'MERCADO') return <section className="showcase-site market-redesign" aria-label="Mercado da build">
+  if (screen === 'MERCADO') return <section className="showcase-site market-redesign" aria-label="Peças da build">
     {renderShowcaseHeader()}
-    <main className="parts-market"><header className="parts-market__head"><div><span className="eyebrow">MODLAB PARTS DESK</span><h1>Seu carrinho<br />de <i>projeto.</i></h1><p>Peças organizadas para a build atual, sem simular compatibilidade que ainda não foi confirmada.</p></div><aside><small>VEÍCULO DA BUILD</small><strong>{vehicle.name}</strong><span>{vehicle.version && vehicle.year ? `${vehicle.version} · ${vehicle.year}` : 'Defina versão e ano'}</span><button onClick={() => setVehiclePickerOpen(true)}>Trocar veículo</button></aside></header><section className="parts-market__toolbar"><span><b>{savedParts.length}</b> itens na sua lista</span><span>Estimativa atual <strong>{currency.format(totalSaved)}</strong></span><button onClick={() => setScreen('BUILD')}>Ver plano da build <ChevronRight size={15} /></button></section><section className="parts-grid">{marketParts.map((part, index) => { const savedPart = savedParts.includes(part.name); const PartIcon = index === 1 ? SlidersHorizontal : index === 2 ? Sparkles : Gauge; return <article key={part.name}><span className="parts-grid__number">0{index + 1}</span><span className="parts-grid__icon"><PartIcon size={25} /></span><small>{part.type}</small><h2>{part.name}</h2><p>Fornecedor de referência: {part.supplier}</p><div><strong>{part.price}</strong><span>{vehicle.version && vehicle.year ? 'Validação pendente' : 'Informe o veículo'}</span></div><button className={savedPart ? 'saved' : ''} onClick={() => setSavedParts((items) => savedPart ? items.filter((item) => item !== part.name) : [...items, part.name])}>{savedPart ? <><Check size={15} /> Na lista</> : <><Plus size={15} /> Adicionar à build</>}</button></article> })}</section><footer className="parts-market__note"><ShieldCheck size={16} /><span>A confirmação de compatibilidade e o link de compra entram quando o catálogo de fornecedores estiver conectado.</span></footer></main>
+    <main className="parts-market"><header className="parts-market__head"><div><span className="eyebrow">MODLAB PARTS DESK</span><h1>Peças da<br /><i>sua build.</i></h1><p>Cadastre as peças que você encontrou, organize o orçamento e leve só o que fizer sentido para a build.</p></div><aside><small>VEÍCULO DA BUILD</small><strong>{vehicle.name}</strong><span>{vehicle.version && vehicle.year ? `${vehicle.version} · ${vehicle.year}` : 'Defina versão e ano'}</span><button onClick={() => setVehiclePickerOpen(true)}>Trocar veículo</button></aside></header><section className="parts-market__toolbar"><span><b>{savedParts.length}</b> itens na sua lista</span><span>Estimativa atual <strong>{currency.format(totalSaved)}</strong></span><button onClick={() => setScreen('BUILD')}>Ver plano da build <ChevronRight size={15} /></button></section><form className="parts-form" onSubmit={addMarketPart}><input value={partForm.name} onChange={(event) => setPartForm((form) => ({ ...form, name: event.target.value }))} placeholder="Nome da peça" required /><input value={partForm.category} onChange={(event) => setPartForm((form) => ({ ...form, category: event.target.value }))} placeholder="Categoria: freios, rodas..." /><input value={partForm.supplier} onChange={(event) => setPartForm((form) => ({ ...form, supplier: event.target.value }))} placeholder="Loja ou fornecedor" /><input value={partForm.price} onChange={(event) => setPartForm((form) => ({ ...form, price: event.target.value }))} inputMode="decimal" placeholder="Preço em R$" required /><input value={partForm.url} onChange={(event) => setPartForm((form) => ({ ...form, url: event.target.value }))} type="url" placeholder="Link de compra (opcional)" /><button type="submit"><Plus size={16} /> Adicionar peça</button></form><section className="parts-grid">{marketParts.length ? marketParts.map((part, index) => { const savedPart = savedParts.includes(part.id); return <article key={part.id}><span className="parts-grid__number">{String(index + 1).padStart(2, '0')}</span><span className="parts-grid__icon"><Gauge size={25} /></span><small>{part.category.toUpperCase()}</small><h2>{part.name}</h2><p>{part.supplier}</p><div><strong>{currency.format(part.price)}</strong><span>{vehicle.version && vehicle.year ? 'Validação pendente' : 'Informe o veículo'}</span></div><footer><button className={savedPart ? 'saved' : ''} onClick={() => toggleSavedPart(part.id)}>{savedPart ? <><Check size={15} /> Na lista</> : <><Plus size={15} /> Adicionar à build</>}</button>{part.url && <a href={part.url} target="_blank" rel="noreferrer">Abrir link</a>}<button className="parts-delete" type="button" onClick={() => deleteMarketPart(part.id)} aria-label={`Remover ${part.name}`}><Trash2 size={15} /></button></footer></article> }) : <div className="parts-empty"><Plus size={26} /><strong>Sua lista de peças está vazia.</strong><p>Adicione a primeira peça acima para começar a testar o beta.</p></div>}</section><footer className="parts-market__note"><ShieldCheck size={16} /><span>Os itens são privados nesta conta. Confirme compatibilidade, instalação e garantia com um profissional.</span></footer></main>
   </section>
   if (screen === 'GARAGEM') return <section className="showcase-site" aria-label="Garagem Modlab">
     {renderShowcaseHeader()}
