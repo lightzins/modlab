@@ -48,7 +48,7 @@ export async function runBuildAssistant(
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: { Authorization: `Bearer ${groqApiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: process.env.GROQ_MODEL || 'groq/compound', messages: [
+      body: JSON.stringify({ model: process.env.GROQ_CHAT_MODEL || 'openai/gpt-oss-20b', messages: [
         { role: 'system', content: prompt },
         ...history.slice(-4).map((item) => ({ role: item.role, content: item.content.slice(0, 1_200) })),
         { role: 'user', content: message },
