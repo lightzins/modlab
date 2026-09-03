@@ -558,6 +558,7 @@ function DesignLab({ user, onSignOut }: { user?: User | null; onSignOut?: () => 
     catch { return [] }
   })
   const buildChatEndRef = useRef<HTMLDivElement>(null)
+  const catalogPhotoRequestsRef = useRef(new Set<string>())
   const persistChatMessage = async (message: BuildChatMessage) => {
     if (!supabase || !user) return
     await supabase.from('ai_conversations').insert({ user_id: user.id, role: message.role, content: message.content, sources: message.sources ?? [] })
@@ -606,6 +607,23 @@ function DesignLab({ user, onSignOut }: { user?: User | null; onSignOut?: () => 
     }).catch(() => undefined)
     return () => { active = false }
   }, [])
+  useEffect(() => {
+    const normalizedQuery = normalizeText(garageQuery)
+    const visibleModels = vehicles.filter((item) => (!normalizedQuery || normalizeText(item.name).includes(normalizedQuery)) && (garageMake === 'Todos' || item.name.startsWith(`${garageMake} `))).filter((item) => !item.image && !catalogPhotoRequestsRef.current.has(item.name)).slice(0, 18)
+    if (!visibleModels.length) return
+    visibleModels.forEach((item) => catalogPhotoRequestsRef.current.add(item.name))
+    let active = true
+    void Promise.all(visibleModels.map(async (item) => {
+      const [make, ...model] = item.name.split(' ')
+      const result = await findModelImage(make, model.join(' ')).catch(() => ({}))
+      return { name: item.name, image: result.image }
+    })).then((found) => {
+      if (!active) return
+      const images = new Map(found.filter((item): item is { name: string; image: string } => Boolean(item.image)).map((item) => [item.name, item.image]))
+      if (images.size) setVehicles((items) => items.map((item) => images.has(item.name) ? { ...item, image: images.get(item.name) } : item))
+    })
+    return () => { active = false }
+  }, [vehicles, garageMake, garageQuery])
   const options = {
     Performance: { icon: Gauge, title: 'Performance', description: 'Potência, resposta e confiabilidade do conjunto.', items: ['Stage 1 ECU', 'Stage 2 ECU', 'Turbo upgrade'] },
     Visual: { icon: Sparkles, title: 'Visual', description: 'Rodas, acabamento e presença da build.', items: ['Rodas forjadas 19”', 'Pacote aerodinâmico', 'Livery discreta'] },
