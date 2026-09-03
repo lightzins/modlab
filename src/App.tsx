@@ -603,7 +603,7 @@ function DesignLab({ user, onSignOut }: { user?: User | null; onSignOut?: () => 
     void fetch('/api/vehicle-catalog').then(async (response) => {
       const payload = await response.json() as { vehicles?: Array<{ make: string; model: string }> }
       if (!active || !response.ok || !payload.vehicles?.length) return
-      setVehicles(payload.vehicles.map((item) => ({ name: `${item.make} ${item.model}`, tag: 'Modelo do catálogo público. Inicie uma build para personalizar.', power: '', progress: '0' })))
+      setVehicles(payload.vehicles.map((item) => ({ name: `${item.make} ${item.model}`, tag: 'Modelo de carro do catálogo FIPE. Inicie uma build para personalizar.', power: '', progress: '0' })))
     }).catch(() => undefined)
     return () => { active = false }
   }, [])

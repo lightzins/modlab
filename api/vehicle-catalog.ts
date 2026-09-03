@@ -1,36 +1,72 @@
-type BrazilianCar = { make: string; model: string }
+type FipeBrand = { code: string; name: string }
+type FipeModel = { code: string; name: string }
+type CatalogVehicle = { id: string; make: string; model: string }
 
-// Catálogo curado: carros de passeio, SUVs e picapes conhecidos no Brasil.
-// Cada entrada é expandida por ano, para oferecer 3.000 opções sem misturar motos.
-const brazilianCars: BrazilianCar[] = [
-  ...['Onix', 'Onix Plus', 'Corsa', 'Celta', 'Prisma', 'Classic', 'Cruze', 'S10', 'Tracker', 'Spin', 'Montana', 'Astra', 'Vectra', 'Blazer'].map((model) => ({ make: 'Chevrolet', model })),
-  ...['Gol', 'Polo', 'T-Cross', 'Nivus', 'Virtus', 'Jetta', 'Passat', 'Voyage', 'Saveiro', 'Fox', 'Up', 'Santana', 'Parati', 'Tiguan'].map((model) => ({ make: 'Volkswagen', model })),
-  ...['Uno', 'Palio', 'Siena', 'Strada', 'Argo', 'Mobi', 'Cronos', 'Toro', 'Pulse', 'Fastback', 'Idea', 'Punto', 'Bravo', 'Doblo', 'Fiorino', 'Tempra'].map((model) => ({ make: 'Fiat', model })),
-  ...['Ka', 'Fiesta', 'Focus', 'EcoSport', 'Ranger', 'Fusion', 'Territory', 'Maverick', 'Courier', 'Escort'].map((model) => ({ make: 'Ford', model })),
-  ...['Civic', 'City', 'Fit', 'HR-V', 'CR-V', 'Accord', 'WR-V'].map((model) => ({ make: 'Honda', model })),
-  ...['Corolla', 'Etios', 'Yaris', 'Hilux', 'SW4', 'RAV4', 'Camry'].map((model) => ({ make: 'Toyota', model })),
-  ...['HB20', 'HB20S', 'Creta', 'Tucson', 'i30', 'Santa Fe', 'Azera', 'Veloster'].map((model) => ({ make: 'Hyundai', model })),
-  ...['Kwid', 'Sandero', 'Logan', 'Duster', 'Captur', 'Megane', 'Clio', 'Scenic', 'Kangoo'].map((model) => ({ make: 'Renault', model })),
-  ...['Versa', 'Sentra', 'Kicks', 'March', 'Frontier', 'Tiida', 'Livina', 'X-Terra'].map((model) => ({ make: 'Nissan', model })),
-  ...['Renegade', 'Compass', 'Commander', 'Wrangler', 'Cherokee'].map((model) => ({ make: 'Jeep', model })),
-  ...['206', '207', '208', '2008', '3008', '307', '308', 'Partner'].map((model) => ({ make: 'Peugeot', model })),
-  ...['C3', 'C4', 'C4 Cactus', 'Aircross', 'Xsara Picasso', 'Berlingo'].map((model) => ({ make: 'Citroën', model })),
-  ...['Lancer', 'ASX', 'Outlander', 'Pajero', 'Eclipse Cross', 'Triton'].map((model) => ({ make: 'Mitsubishi', model })),
-  ...['Picanto', 'Cerato', 'Soul', 'Sportage', 'Sorento', 'Rio', 'Carnival'].map((model) => ({ make: 'Kia', model })),
-  ...['320i', '328i', 'M3', 'X1', 'X3', 'X5'].map((model) => ({ make: 'BMW', model })),
-  ...['C 180', 'C 200', 'A 200', 'GLA 200', 'GLB 200', 'Sprinter'].map((model) => ({ make: 'Mercedes-Benz', model })),
-  ...['A3', 'A4', 'Q3', 'Q5', 'TT'].map((model) => ({ make: 'Audi', model })),
-  ...['Forester', 'Impreza', 'Legacy', 'Outback', 'XV'].map((model) => ({ make: 'Subaru', model })),
-  ...['Cayenne', 'Macan', 'Panamera', '911', 'Boxster'].map((model) => ({ make: 'Porsche', model })),
+const FIPE_CARS_API = 'https://fipe.parallelum.com.br/api/v2/cars'
+const CATALOG_SIZE = 3000
+
+// A ordem privilegia marcas com presença forte no Brasil. A rota da FIPE é
+// exclusivamente de carros, portanto motos não fazem parte deste catálogo.
+const priorityBrands = [
+  'GM - Chevrolet', 'VW - VolksWagen', 'Fiat', 'Ford', 'Honda', 'Toyota',
+  'Hyundai', 'Renault', 'Nissan', 'Jeep', 'Peugeot', 'Citroën', 'Mitsubishi',
+  'Kia Motors', 'BMW', 'Mercedes-Benz', 'Audi', 'Volvo', 'Land Rover', 'MINI',
+  'Suzuki', 'Subaru', 'Porsche', 'RAM', 'Dodge', 'Chery', 'BYD', 'GWM',
+  'Caoa Chery', 'JAC', 'Lexus', 'Jaguar', 'Mazda', 'Acura', 'Volkswagen',
 ]
 
-export default function handler(_request: any, response: any) {
+let cachedVehicles: CatalogVehicle[] | null = null
+
+function normalized(value: string) {
+  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+}
+
+async function getJson<T>(url: string): Promise<T> {
+  const result = await fetch(url)
+  if (!result.ok) throw new Error(`FIPE respondeu ${result.status}`)
+  return result.json() as Promise<T>
+}
+
+async function buildCatalog() {
+  const brands = await getJson<FipeBrand[]>(`${FIPE_CARS_API}/brands`)
+  const chosenBrands = priorityBrands
+    .map((wanted) => brands.find((brand) => normalized(brand.name) === normalized(wanted)))
+    .filter((brand): brand is FipeBrand => Boolean(brand))
+
+  const modelLists = await Promise.all(chosenBrands.map(async (brand) => ({
+    brand,
+    models: await getJson<FipeModel[]>(`${FIPE_CARS_API}/brands/${brand.code}/models`),
+  })))
+
+  const seen = new Set<string>()
+  const vehicles: CatalogVehicle[] = []
+  for (const { brand, models } of modelLists) {
+    for (const model of models) {
+      const name = model.name.trim()
+      const identity = `${normalized(brand.name)}:${normalized(name)}`
+      if (!name || seen.has(identity)) continue
+      seen.add(identity)
+      vehicles.push({
+        id: `fipe-${brand.code}-${model.code}`,
+        make: brand.name.replace(/^GM - /, '').replace(/^VW - /, ''),
+        model: name,
+      })
+      if (vehicles.length === CATALOG_SIZE) return vehicles
+    }
+  }
+
+  return vehicles
+}
+
+export default async function handler(_request: any, response: any) {
   response.setHeader('Content-Type', 'application/json; charset=utf-8')
   response.setHeader('Cache-Control', 's-maxage=86400, stale-while-revalidate=604800')
-  const vehicles = Array.from({ length: 3000 }, (_, index) => {
-    const car = brazilianCars[index % brazilianCars.length]
-    const year = 2025 - Math.floor(index / brazilianCars.length)
-    return { id: `${car.make}-${car.model}-${year}`.toLowerCase().replace(/\s+/g, '-'), make: car.make, model: `${car.model} ${year}` }
-  })
-  return response.status(200).json({ vehicles, total: vehicles.length })
+
+  try {
+    cachedVehicles ??= await buildCatalog()
+    return response.status(200).json({ vehicles: cachedVehicles, total: cachedVehicles.length, source: 'FIPE carros' })
+  } catch (error) {
+    console.error('Não foi possível carregar o catálogo FIPE', error)
+    return response.status(503).json({ error: 'Catálogo de carros temporariamente indisponível.' })
+  }
 }
