@@ -20,6 +20,19 @@ export type VehicleResearchResult = {
   note: string
 }
 
+export type VehicleSearchResearchResult = {
+  id: string
+  make: string
+  model: string
+  year: number | null
+  version: string | null
+  engine: string | null
+  horsepowerCv: number | null
+  description: string
+  sourceUrl: string | null
+  sourceTitle: string | null
+}
+
 type GeminiResponse = {
   candidates?: Array<{ content?: { parts?: Array<{ text?: string }> }; groundingMetadata?: { groundingChunks?: Array<{ web?: { uri?: string; title?: string } }> } }>
   error?: { message?: string }
@@ -73,5 +86,52 @@ export async function researchVehicleSpecs(apiKey: string, vehicles: VehicleRese
     }) }
   } catch {
     throw new Error('A IA retornou uma ficha em formato inválido.')
+  }
+}
+
+export async function searchVehicleModels(apiKey: string, rawQuery: string) {
+  const query = rawQuery.trim().slice(0, 100)
+  if (!query) throw new Error('Informe marca ou modelo para pesquisar.')
+  const model = process.env.GEMINI_VEHICLE_MODEL || process.env.GEMINI_MODEL || 'gemini-3.7-flash'
+  const requestBody = {
+    contents: [{ parts: [{ text: [
+      'Responda somente JSON válido, sem markdown, exatamente no formato {"vehicles":[...]}.',
+      'Pesquise na web modelos de veículos que correspondam à busca. Não use lista interna ou exemplos fictícios.',
+      'Retorne no máximo 6 opções reais. Para cada uma, use: id, make, model, year, version, engine, horsepowerCv, description, sourceUrl, sourceTitle.',
+      'year e horsepowerCv podem ser null quando a busca não definir uma versão única. Não invente especificações, fontes ou links.',
+      'Escreva descrição em português do Brasil, curta e útil. Considere o mercado brasileiro quando ele for relevante.',
+      `Busca do usuário: ${query}`,
+    ].join('\n') }] }],
+    tools: [{ google_search: {} }],
+    generationConfig: { responseMimeType: 'application/json', temperature: 0.1, maxOutputTokens: 1200 },
+  }
+  let response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+    method: 'POST', headers: { 'x-goog-api-key': apiKey, 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody),
+  })
+  let payload = await response.json() as GeminiResponse
+  if (!response.ok && /google search|grounding|tool/i.test(payload.error?.message ?? '')) {
+    delete (requestBody as { tools?: unknown }).tools
+    response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+      method: 'POST', headers: { 'x-goog-api-key': apiKey, 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody),
+    })
+    payload = await response.json() as GeminiResponse
+  }
+  if (!response.ok) throw new Error(payload.error?.message || 'Falha ao pesquisar veículos.')
+  const output = payload.candidates?.[0]?.content?.parts?.map((part) => part.text ?? '').join('').trim()
+  if (!output) throw new Error('A IA não retornou veículos para essa busca.')
+  try {
+    const parsed = JSON.parse(output) as { vehicles?: VehicleSearchResearchResult[] }
+    const groundedSource = payload.candidates?.[0]?.groundingMetadata?.groundingChunks?.map((chunk) => chunk.web).find((web): web is { uri: string; title?: string } => Boolean(web?.uri))
+    const vehicles = (parsed.vehicles ?? []).slice(0, 6).filter((vehicle) => vehicle?.make && vehicle?.model).map((vehicle, index) => ({
+      ...vehicle,
+      id: vehicle.id || `research-${index + 1}`,
+      sourceUrl: vehicle.sourceUrl ?? groundedSource?.uri ?? null,
+      sourceTitle: vehicle.sourceTitle ?? groundedSource?.title ?? null,
+    }))
+    if (!vehicles.length) throw new Error('Nenhum veículo confiável foi encontrado para essa busca.')
+    return { vehicles }
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith('Nenhum veículo')) throw error
+    throw new Error('A IA retornou a busca em um formato inválido.')
   }
 }
