@@ -584,6 +584,7 @@ function DesignLab({ user, onSignOut }: { user?: User | null; onSignOut?: () => 
   })
   useEffect(() => { window.localStorage.removeItem('modlab-showcase-catalog'); window.localStorage.removeItem('modlab-showcase-parts') }, [])
   const [projectBackground, setProjectBackground] = useState(() => window.localStorage.getItem(`modlab-project-background:${betaStorageScope}`) ?? '')
+  const [projectPhotoPreview, setProjectPhotoPreview] = useState('')
   const [photoStatus, setPhotoStatus] = useState('')
   useEffect(() => { window.localStorage.setItem('modlab-showcase-section', section); window.localStorage.setItem('modlab-showcase-selected', selected); window.localStorage.setItem('modlab-showcase-vehicle', String(vehicleIndex)); window.localStorage.setItem('modlab-showcase-steps', JSON.stringify(buildSteps)); window.localStorage.setItem(`modlab-beta-v3-vehicles:${betaStorageScope}`, JSON.stringify(vehicles)) }, [section, selected, vehicleIndex, buildSteps, vehicles, betaStorageScope])
   useEffect(() => { window.localStorage.setItem(`modlab-project-background:${betaStorageScope}`, projectBackground) }, [projectBackground, betaStorageScope])
@@ -666,6 +667,8 @@ function DesignLab({ user, onSignOut }: { user?: User | null; onSignOut?: () => 
   const current = options[section as keyof typeof options]
   const Icon = current.icon
   const vehicle = vehicles[vehicleIndex] ?? vehicles[0] ?? { name: 'Nenhum veículo selecionado', tag: 'Pesquise e adicione um veículo para começar.', power: '—', progress: '0' }
+  const buildBackground = projectPhotoPreview || projectBackground || vehicle.image
+  const hasCustomProjectPhoto = Boolean(projectPhotoPreview || projectBackground)
   const selectVehicle = (index: number) => { setVehicleIndex(index); setVehiclePickerOpen(false); setScreen('TUNING') }
   const openVehicleSetup = (index: number) => {
     const candidate = vehicles[index]
@@ -684,15 +687,17 @@ function DesignLab({ user, onSignOut }: { user?: User | null; onSignOut?: () => 
   const uploadProjectPhoto = async (file?: File) => {
     if (!file) return
     if (!/^image\/(jpeg|png|webp)$/.test(file.type) || file.size > 10 * 1024 * 1024) { setPhotoStatus('Use JPG, PNG ou WebP de até 10 MB.'); return }
-    if (!supabase || !user) { setPhotoStatus('Entre em uma conta para guardar a foto do projeto.'); return }
+    setProjectPhotoPreview(URL.createObjectURL(file))
+    if (!supabase || !user) { setPhotoStatus('Foto aplicada neste navegador. Entre em uma conta para salvá-la permanentemente.'); return }
     setPhotoStatus('Enviando foto...')
     const extension = file.type.split('/')[1] === 'jpeg' ? 'jpg' : file.type.split('/')[1]
     const path = `${user.id}/${Date.now()}.${extension}`
     const { error } = await supabase.storage.from('project-images').upload(path, file, { contentType: file.type, upsert: false })
-    if (error) { setPhotoStatus(`Não foi possível enviar: ${error.message}`); return }
+    if (error) { setPhotoStatus(`Foto aplicada neste navegador, mas não foi salva na conta: ${error.message}`); return }
     const signed = await supabase.storage.from('project-images').createSignedUrl(path, 60 * 60 * 24 * 365)
     if (signed.error || !signed.data?.signedUrl) { setPhotoStatus('A foto foi enviada, mas não pôde ser aberta.'); return }
     setProjectBackground(signed.data.signedUrl)
+    setProjectPhotoPreview('')
     setPhotoStatus('Foto aplicada ao fundo da sua build.')
   }
   const totalSaved = savedParts.reduce((sum, partId) => sum + (marketParts.find((part) => part.id === partId)?.price ?? 0), 0)
@@ -797,9 +802,9 @@ function DesignLab({ user, onSignOut }: { user?: User | null; onSignOut?: () => 
   if (screen === 'TUNING') return <section className="showcase-site" aria-label="Oficina de personalização">
     {renderShowcaseHeader()}
     <main className="showcase-main">
-      <div className="showcase-photo">{projectBackground ? <img src={projectBackground} alt="Foto do projeto" /> : <div className="showcase-no-image"><CarFront size={32} /> Adicione uma foto real do seu projeto</div>}<div className="showcase-light" /></div>
+      <div className="showcase-photo">{buildBackground ? <img src={buildBackground} alt={hasCustomProjectPhoto ? 'Foto do projeto' : `Foto de ${vehicle.name}`} /> : <div className="showcase-no-image"><CarFront size={32} /> Carregando foto pública do modelo</div>}<div className="showcase-light" /></div>
       <section className="showcase-identity"><span className="eyebrow">BUILD ATIVA {vehicle.year ? `· ${vehicle.year}` : ''}</span><h1>{vehicle.name}</h1><p>{vehicle.tag}</p><div className="showcase-stats"><article><small>BUILD</small><strong>{vehicle.progress}<em>%</em></strong></article></div><div className="showcase-meter"><span><b>ÍNDICE DE PREPARO</b><b>{vehicle.progress}%</b></span><i style={{ width: `${vehicle.progress}%` }} /></div></section>
-      <aside className="showcase-config"><header><span><Icon size={20} /></span><div><small>AJUSTE ATUAL</small><strong>{current.title}</strong></div></header><p>{current.description}</p><div>{current.items.map((item, index) => <button className={selected === item ? 'selected' : ''} key={item} onClick={() => setSelected(item)}><b>{String(index + 1).padStart(2, '0')}</b><span>{item}</span>{selected === item ? <Check size={15} /> : <Plus size={15} />}</button>)}</div><footer><span>FOTO DO PROJETO</span><label className="project-photo-upload"><ImageUp size={14} /> {projectBackground ? 'Trocar foto' : 'Adicionar foto'}<input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => void uploadProjectPhoto(event.target.files?.[0])} /></label>{photoStatus && <small className="project-photo-status">{photoStatus}</small>}<button onClick={saveConfiguration}>{configurationSaved ? <><Check size={13} /> Salvo</> : <><Save size={13} /> Salvar ajuste</>}</button></footer></aside>
+      <aside className="showcase-config"><header><span><Icon size={20} /></span><div><small>AJUSTE ATUAL</small><strong>{current.title}</strong></div></header><p>{current.description}</p><div>{current.items.map((item, index) => <button className={selected === item ? 'selected' : ''} key={item} onClick={() => setSelected(item)}><b>{String(index + 1).padStart(2, '0')}</b><span>{item}</span>{selected === item ? <Check size={15} /> : <Plus size={15} />}</button>)}</div><footer><span>FUNDO DA BUILD</span><small className="project-photo-hint">Foto pública do modelo por padrão</small><label className="project-photo-upload"><ImageUp size={14} /> {hasCustomProjectPhoto ? 'Trocar foto própria' : 'Usar foto própria (opcional)'}<input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => void uploadProjectPhoto(event.target.files?.[0])} /></label>{hasCustomProjectPhoto && <button type="button" className="project-photo-reset" onClick={() => { setProjectPhotoPreview(''); setProjectBackground(''); setPhotoStatus('Foto pública do modelo restaurada.') }}>Usar foto do catálogo</button>}{photoStatus && <small className="project-photo-status">{photoStatus}</small>}<button onClick={saveConfiguration}>{configurationSaved ? <><Check size={13} /> Salvo</> : <><Save size={13} /> Salvar ajuste</>}</button></footer></aside>
     </main>
     <nav className="showcase-actions" aria-label="Categorias de personalização">{Object.entries(options).map(([name, option]) => { const ActionIcon = option.icon; return <button className={section === name ? 'active' : ''} key={name} onClick={() => { setSection(name); setSelected(option.items[0]) }}><span><ActionIcon size={21} /></span><strong>{name}</strong><small>{name === 'Performance' ? 'motor & transmissão' : name === 'Visual' ? 'estilo & acabamento' : name === 'Dinâmica' ? 'suspensão & grip' : 'planejamento guiado'}</small></button> })}</nav>
     <footer className="showcase-footer"><span><b>SELECIONE UM MÓDULO</b> para editar sua build</span><span><i /> Dados incompletos nunca recebem potência estimada</span></footer>

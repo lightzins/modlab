@@ -847,6 +847,8 @@ main { background: linear-gradient(135deg, #111 0%, #161616 54%, #111 100%); }
 .showcase-config footer button { display: inline-flex; align-items: center; justify-content: center; gap: 5px; margin-top: 4px; padding: 7px; border: 0; border-radius: 5px; color: #07150f; background: var(--ml-green); cursor: pointer; font-size: 7px; font-weight: 700; }
 .project-photo-upload { display: inline-flex; align-items: center; justify-content: center; gap: 5px; margin-top: 4px; padding: 7px; border: 1px dashed rgba(0,245,160,.6); border-radius: 5px; color: var(--ml-green); cursor: pointer; font-size: 7px; font-weight: 700; }
 .project-photo-upload input { display: none; }
+.project-photo-hint { color: #b8b8b8; font-size: 6px; }
+.showcase-config footer .project-photo-reset { margin-top: 0; border: 1px solid rgba(247,247,247,.16); color: #d2d2d2; background: transparent; }
 .project-photo-status { color: #b8b8b8; font-size: 6px; line-height: 1.4; }
 .showcase-actions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid rgba(247,247,247,.1); background: #171717; }
 .showcase-actions button { min-height: 103px; display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; align-content: center; column-gap: 10px; row-gap: 4px; padding: 14px clamp(12px, 2vw, 26px); border: 0; border-right: 1px solid rgba(247,247,247,.08); color: #b0b0b0; background: transparent; cursor: pointer; text-align: left; }
