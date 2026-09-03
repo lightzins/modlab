@@ -1026,6 +1026,7 @@ main { background: linear-gradient(135deg, #111 0%, #161616 54%, #111 100%); }
 .garage-search-error { margin: -4px 0 14px; color: #ff9a9a; font-size: 12px; }
 .garage-redesign__results h2 { margin: 5px 0 0; color: #f7f7f7; font-size: 18px; letter-spacing: -.6px; }
 .garage-redesign__results > header > span { color: #999; font-size: 8px; }
+.catalog-photo-progress { display: inline-flex; align-items: center; gap: 6px; color: #8ff1d0 !important; }
 .garage-vehicle-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 .garage-vehicle-grid > button { position: relative; min-height: 114px; display: grid; grid-template-columns: 108px minmax(0, 1fr) auto; align-items: center; gap: 11px; overflow: hidden; padding: 0 12px 0 0; border: 1px solid rgba(247,247,247,.1); border-radius: 8px; color: #f7f7f7; background: #19191a; cursor: pointer; text-align: left; transition: transform .18s ease, border-color .18s ease, background .18s ease; }
 .garage-vehicle-grid > button:hover { border-color: rgba(0,245,160,.58); background: #222223; transform: translateY(-3px); }

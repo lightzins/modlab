@@ -559,6 +559,11 @@ function DesignLab({ user, onSignOut }: { user?: User | null; onSignOut?: () => 
   })
   const buildChatEndRef = useRef<HTMLDivElement>(null)
   const catalogPhotoRequestsRef = useRef(new Set<string>())
+  const catalogPhotoQueueRef = useRef<string[]>([])
+  const catalogPhotoQueuedRef = useRef(new Set<string>())
+  const catalogPhotoWorkerRef = useRef(false)
+  const catalogPhotoAliveRef = useRef(true)
+  const [catalogPhotoPreload, setCatalogPhotoPreload] = useState({ loaded: 0, total: 0, active: false })
   const persistChatMessage = async (message: BuildChatMessage) => {
     if (!supabase || !user) return
     await supabase.from('ai_conversations').insert({ user_id: user.id, role: message.role, content: message.content, sources: message.sources ?? [] })
@@ -603,28 +608,55 @@ function DesignLab({ user, onSignOut }: { user?: User | null; onSignOut?: () => 
     void fetch('/api/vehicle-catalog').then(async (response) => {
       const payload = await response.json() as { vehicles?: Array<{ make: string; model: string }> }
       if (!active || !response.ok || !payload.vehicles?.length) return
-      setVehicles(payload.vehicles.map((item) => ({ name: `${item.make} ${item.model}`, tag: 'Modelo de carro do catálogo FIPE. Inicie uma build para personalizar.', power: '', progress: '0' })))
+      const catalogVehicles = payload.vehicles
+      setVehicles((current) => {
+        const previousByName = new Map(current.map((vehicle) => [vehicle.name, vehicle]))
+        return catalogVehicles.map((item) => {
+          const name = `${item.make} ${item.model}`
+          const previous = previousByName.get(name)
+          return { name, tag: previous?.tag ?? 'Modelo de carro do catálogo FIPE. Inicie uma build para personalizar.', power: previous?.power ?? '', progress: previous?.progress ?? '0', image: previous?.image, year: previous?.year, version: previous?.version }
+        })
+      })
     }).catch(() => undefined)
     return () => { active = false }
   }, [])
   useEffect(() => {
     const normalizedQuery = normalizeText(garageQuery)
-    const visibleModels = vehicles.filter((item) => (!normalizedQuery || normalizeText(item.name).includes(normalizedQuery)) && (garageMake === 'Todos' || item.name.startsWith(`${garageMake} `))).filter((item) => !item.image && !catalogPhotoRequestsRef.current.has(item.name)).slice(0, 18)
-    if (!visibleModels.length) return
-    visibleModels.forEach((item) => catalogPhotoRequestsRef.current.add(item.name))
-    let active = true
-    void Promise.all(visibleModels.map(async (item) => {
-      const [make, ...model] = item.name.split(' ')
-      const modelName = model.join(' ').replace(/\s+(?:19|20)\d{2}$/, '')
-      const result = await findModelImage(make, modelName).catch(() => ({ image: undefined }))
-      return { name: item.name, image: result.image }
-    })).then((found) => {
-      if (!active) return
-      const images = new Map(found.filter((item): item is { name: string; image: string } => Boolean(item.image)).map((item) => [item.name, item.image]))
-      if (images.size) setVehicles((items) => items.map((item) => images.has(item.name) ? { ...item, image: images.get(item.name) } : item))
+    const missing = vehicles.filter((item) => !item.image && !catalogPhotoRequestsRef.current.has(item.name) && !catalogPhotoQueuedRef.current.has(item.name))
+    const prioritized = [...missing.filter((item) => (!normalizedQuery || normalizeText(item.name).includes(normalizedQuery)) && (garageMake === 'Todos' || item.name.startsWith(`${garageMake} `))), ...missing.filter((item) => normalizedQuery && !normalizeText(item.name).includes(normalizedQuery))]
+    prioritized.forEach((item) => {
+      catalogPhotoQueuedRef.current.add(item.name)
+      catalogPhotoQueueRef.current.push(item.name)
     })
-    return () => { active = false }
+
+    const loaded = vehicles.filter((item) => Boolean(item.image)).length
+    setCatalogPhotoPreload({ loaded, total: vehicles.length, active: catalogPhotoWorkerRef.current || catalogPhotoQueueRef.current.length > 0 })
+    if (catalogPhotoWorkerRef.current || !catalogPhotoQueueRef.current.length) return
+
+    catalogPhotoWorkerRef.current = true
+    void (async () => {
+      while (catalogPhotoQueueRef.current.length && catalogPhotoAliveRef.current) {
+        const batch = catalogPhotoQueueRef.current.splice(0, 3)
+        batch.forEach((name) => {
+          catalogPhotoQueuedRef.current.delete(name)
+          catalogPhotoRequestsRef.current.add(name)
+        })
+        const found = await Promise.all(batch.map(async (name) => {
+          const [make, ...model] = name.split(' ')
+          const result = await findModelImage(make, model.join(' ')).catch(() => ({ image: undefined }))
+          return { name, image: result.image }
+        }))
+        if (!catalogPhotoAliveRef.current) break
+        const images = new Map(found.filter((item): item is { name: string; image: string } => Boolean(item.image)).map((item) => [item.name, item.image]))
+        if (images.size) setVehicles((items) => items.map((item) => images.has(item.name) ? { ...item, image: images.get(item.name) } : item))
+        setCatalogPhotoPreload((current) => ({ ...current, loaded: current.loaded + images.size, active: true }))
+        await new Promise((resolve) => window.setTimeout(resolve, 180))
+      }
+      catalogPhotoWorkerRef.current = false
+      if (catalogPhotoAliveRef.current) setCatalogPhotoPreload((current) => ({ ...current, active: catalogPhotoQueueRef.current.length > 0 }))
+    })()
   }, [vehicles, garageMake, garageQuery])
+  useEffect(() => () => { catalogPhotoAliveRef.current = false }, [])
   const options = {
     Performance: { icon: Gauge, title: 'Performance', description: 'Potência, resposta e confiabilidade do conjunto.', items: ['Stage 1 ECU', 'Stage 2 ECU', 'Turbo upgrade'] },
     Visual: { icon: Sparkles, title: 'Visual', description: 'Rodas, acabamento e presença da build.', items: ['Rodas forjadas 19”', 'Pacote aerodinâmico', 'Livery discreta'] },
@@ -802,7 +834,7 @@ function DesignLab({ user, onSignOut }: { user?: User | null; onSignOut?: () => 
       <header className="garage-redesign__hero"><div><span className="eyebrow">VEHICLE FINDER</span><h1>Qual carro<br />vai virar <i>build?</i></h1><p>Encontre o modelo primeiro. Depois, informe a versão e o ano para começar o projeto corretamente.</p></div><aside><span>CATÁLOGO ATIVO</span><strong>{vehicles.length}</strong><small>modelos disponíveis</small></aside></header>
       <form className="garage-search" onSubmit={searchGarage}><Search size={21} /><input value={garageQuery} onChange={(event) => setGarageQuery(event.target.value)} placeholder="Digite marca ou modelo: Civic, Opala, Gol, GT-R..." aria-label="Buscar carro no catálogo" /><button type="submit" disabled={searchingGarage}>{searchingGarage ? 'Buscando...' : 'Buscar'}</button></form>
       <div className="garage-makes">{garageMakes.map((make) => <button className={garageMake === make ? 'active' : ''} key={make} onClick={() => setGarageMake(make)}>{make}</button>)}</div>
-      <section className="garage-redesign__results"><header><div><span className="eyebrow">RESULTADOS</span><h2>{filteredGarageVehicles.length} modelos encontrados</h2></div><span>Escolha um carro para iniciar uma build</span></header>{garageSearchError && <p className="garage-search-error">{garageSearchError}</p>}{filteredGarageVehicles.length ? <div className="garage-vehicle-grid">{filteredGarageVehicles.slice(0, 48).map((car) => { const index = vehicles.findIndex((item) => item.name === car.name); return <button key={car.name} onClick={() => openVehicleSetup(index)}>{car.image ? <img src={car.image} alt={car.name} /> : <span className="garage-vehicle-grid__empty"><CarFront size={22} /></span>}<div><small>MODELO {String(index + 1).padStart(3, '0')}</small><strong>{car.name}</strong><em>{car.year ? `Ano ${car.year}` : 'Iniciar build'}</em></div><ChevronRight size={17} /></button> })}</div> : <div className="beta-start"><CarFront size={27} /><strong>Catálogo de veículos carregando.</strong><p>Você poderá pesquisar por marca ou modelo assim que os modelos públicos estiverem disponíveis.</p></div>}</section>
+      <section className="garage-redesign__results"><header><div><span className="eyebrow">RESULTADOS</span><h2>{filteredGarageVehicles.length} modelos encontrados</h2></div><span className="catalog-photo-progress">{catalogPhotoPreload.active ? <><LoaderCircle className="spin" size={12} /> Fotos em pré-carregamento: {catalogPhotoPreload.loaded}/{catalogPhotoPreload.total}</> : <>Escolha um carro para iniciar uma build</>}</span></header>{garageSearchError && <p className="garage-search-error">{garageSearchError}</p>}{filteredGarageVehicles.length ? <div className="garage-vehicle-grid">{filteredGarageVehicles.slice(0, 48).map((car) => { const index = vehicles.findIndex((item) => item.name === car.name); return <button key={car.name} onClick={() => openVehicleSetup(index)}>{car.image ? <img src={car.image} alt={car.name} /> : <span className="garage-vehicle-grid__empty"><CarFront size={22} /></span>}<div><small>MODELO {String(index + 1).padStart(3, '0')}</small><strong>{car.name}</strong><em>{car.year ? `Ano ${car.year}` : 'Iniciar build'}</em></div><ChevronRight size={17} /></button> })}</div> : <div className="beta-start"><CarFront size={27} /><strong>Catálogo de veículos carregando.</strong><p>Você poderá pesquisar por marca ou modelo assim que os modelos públicos estiverem disponíveis.</p></div>}</section>
     </main>
     <footer className="showcase-footer"><span><b>CATÁLOGO DE DESCOBERTA</b> escolha o modelo e informe os dados na próxima etapa</span><span><i /> Dados armazenados neste dispositivo</span></footer>
   </section>
