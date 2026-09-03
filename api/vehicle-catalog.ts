@@ -15,6 +15,17 @@ const priorityBrands = [
   'Caoa Chery', 'JAC', 'Lexus', 'Jaguar', 'Mazda', 'Acura', 'Volkswagen',
 ]
 
+// Estes aparecem primeiro para que a navegação inicial mostre carros comuns
+// nas ruas brasileiras, antes das versões históricas da base FIPE.
+const featuredModels: Array<[string, string]> = [
+  ['Chevrolet', 'Onix'], ['Chevrolet', 'Onix Plus'], ['Chevrolet', 'Tracker'], ['Chevrolet', 'S10'], ['Chevrolet', 'Corsa'], ['Chevrolet', 'Celta'], ['Chevrolet', 'Cruze'], ['Chevrolet', 'Vectra'],
+  ['VolksWagen', 'Polo'], ['VolksWagen', 'T-Cross'], ['VolksWagen', 'Nivus'], ['VolksWagen', 'Virtus'], ['VolksWagen', 'Gol'], ['VolksWagen', 'Saveiro'], ['VolksWagen', 'Jetta'],
+  ['Fiat', 'Strada'], ['Fiat', 'Argo'], ['Fiat', 'Mobi'], ['Fiat', 'Cronos'], ['Fiat', 'Toro'], ['Fiat', 'Pulse'], ['Fiat', 'Fastback'], ['Fiat', 'Uno'], ['Fiat', 'Palio'],
+  ['Hyundai', 'HB20'], ['Hyundai', 'Creta'], ['Toyota', 'Corolla'], ['Toyota', 'Hilux'], ['Toyota', 'Yaris'], ['Honda', 'Civic'], ['Honda', 'City'], ['Honda', 'HR-V'],
+  ['Renault', 'Kwid'], ['Renault', 'Duster'], ['Renault', 'Sandero'], ['Nissan', 'Kicks'], ['Nissan', 'Versa'], ['Jeep', 'Renegade'], ['Jeep', 'Compass'],
+  ['Ford', 'Ranger'], ['Ford', 'Maverick'], ['Ford', 'Ka'], ['Ford', 'EcoSport'], ['Peugeot', '208'], ['Citroën', 'C3'], ['Mitsubishi', 'L200 Triton'],
+]
+
 let cachedVehicles: CatalogVehicle[] | null = null
 
 function normalized(value: string) {
@@ -39,16 +50,20 @@ async function buildCatalog() {
   })))
 
   const seen = new Set<string>()
-  const vehicles: CatalogVehicle[] = []
+  const vehicles: CatalogVehicle[] = featuredModels.map(([make, model], index) => {
+    seen.add(`${normalized(make)}:${normalized(model)}`)
+    return { id: `featured-${index + 1}`, make, model }
+  })
   for (const { brand, models } of modelLists) {
     for (const model of models) {
       const name = model.name.trim()
-      const identity = `${normalized(brand.name)}:${normalized(name)}`
+      const make = brand.name.replace(/^GM - /, '').replace(/^VW - /, '')
+      const identity = `${normalized(make)}:${normalized(name)}`
       if (!name || seen.has(identity)) continue
       seen.add(identity)
       vehicles.push({
         id: `fipe-${brand.code}-${model.code}`,
-        make: brand.name.replace(/^GM - /, '').replace(/^VW - /, ''),
+        make,
         model: name,
       })
       if (vehicles.length === CATALOG_SIZE) return vehicles
