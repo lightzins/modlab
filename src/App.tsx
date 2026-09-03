@@ -863,7 +863,6 @@ function AppContent({ active, projects, activeProjectName, onNavigate, onAddVehi
 export default function App() {
   const isModlabPath = () => ['/', '/teste', '/testes'].includes(window.location.pathname)
   const [active, setActive] = useState(() => isModlabPath() ? 7 : 0)
-  const [introEntered, setIntroEntered] = useState(false)
   const engineAudioRef = useRef<HTMLAudioElement>(null)
   const engineAudioContextRef = useRef<AudioContext | null>(null)
   const engineGainRef = useRef<GainNode | null>(null)
@@ -927,8 +926,6 @@ export default function App() {
   }
   const openProject = (project: GarageProject) => { setActiveProjectName(project.name); navigate(3) }
   const enterWorkshop = async () => {
-    if (introEntered) return
-    setIntroEntered(true)
     const audio = engineAudioRef.current
     const AudioContextClass = window.AudioContext ?? (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
     if (!audio || !AudioContextClass) return
@@ -953,10 +950,24 @@ export default function App() {
       engineEndTimerRef.current = window.setTimeout(() => { audio.pause(); audio.currentTime = 0 }, 1_800)
     } catch { /* A entrada continua mesmo sem saída de áudio disponível. */ }
   }
-  const introOverlay = <section className={introEntered ? 'site-intro site-intro--hidden' : 'site-intro site-intro--active'} aria-label="Entrada da oficina"><div className="site-intro__panel"><img src="/modlab-logo.png" alt="Modlab" /><span>MODLAB / PERFORMANCE GARAGE</span><h1>Entre na oficina.</h1><button type="button" onClick={() => void enterWorkshop()}>Entrar na oficina <span>↗</span></button></div></section>
+  useEffect(() => {
+    if (!authReady) return
+    void enterWorkshop()
+    const playOnFirstInteraction = () => {
+      void enterWorkshop()
+      window.removeEventListener('pointerdown', playOnFirstInteraction)
+      window.removeEventListener('keydown', playOnFirstInteraction)
+    }
+    window.addEventListener('pointerdown', playOnFirstInteraction, { once: true })
+    window.addEventListener('keydown', playOnFirstInteraction, { once: true })
+    return () => {
+      window.removeEventListener('pointerdown', playOnFirstInteraction)
+      window.removeEventListener('keydown', playOnFirstInteraction)
+    }
+  }, [authReady])
   if (!authReady) return <main className="auth-page"><section className="auth-card"><p>Conectando ao Modlab…</p></section></main>
   if (isSupabaseConfigured && passwordRecovery && user) return <LoginPage recoveryUser={user} onRecoveryDone={() => setPasswordRecovery(false)} />
   if (isSupabaseConfigured && !user) return <LoginPage />
-  if (active === 7) return <><audio ref={engineAudioRef} src="/audio/vw-r32-v6.mp3" playsInline preload="auto" />{introOverlay}<DesignLab user={user} onSignOut={isSupabaseConfigured ? signOut : undefined} /></>
-  return <><audio ref={engineAudioRef} src="/audio/vw-r32-v6.mp3" playsInline preload="auto" />{introOverlay}<div className="app-shell"><Sidebar active={active} onChange={navigate} open={navOpen} onClose={() => setNavOpen(false)} />{navOpen && <button className="backdrop" onClick={() => setNavOpen(false)} aria-label="Fechar menu" />}<main><header className="page-header"><button className="menu-button" onClick={() => setNavOpen(true)} aria-label="Abrir menu"><Menu size={20} /></button><div><h1>{current.title}</h1>{active !== 1 && <p>{current.description}</p>}</div></header><AppContent active={active} projects={projects} activeProjectName={activeProjectName} onNavigate={navigate} onAddVehicle={addVehicle} onOpenProject={openProject} /></main></div></>
+  if (active === 7) return <><audio ref={engineAudioRef} src="/audio/vw-r32-v6.mp3" playsInline preload="auto" /><DesignLab user={user} onSignOut={isSupabaseConfigured ? signOut : undefined} /></>
+  return <><audio ref={engineAudioRef} src="/audio/vw-r32-v6.mp3" playsInline preload="auto" /><div className="app-shell"><Sidebar active={active} onChange={navigate} open={navOpen} onClose={() => setNavOpen(false)} />{navOpen && <button className="backdrop" onClick={() => setNavOpen(false)} aria-label="Fechar menu" />}<main><header className="page-header"><button className="menu-button" onClick={() => setNavOpen(true)} aria-label="Abrir menu"><Menu size={20} /></button><div><h1>{current.title}</h1>{active !== 1 && <p>{current.description}</p>}</div></header><AppContent active={active} projects={projects} activeProjectName={activeProjectName} onNavigate={navigate} onAddVehicle={addVehicle} onOpenProject={openProject} /></main></div></>
 }
