@@ -615,7 +615,8 @@ function DesignLab({ user, onSignOut }: { user?: User | null; onSignOut?: () => 
     let active = true
     void Promise.all(visibleModels.map(async (item) => {
       const [make, ...model] = item.name.split(' ')
-      const result = await findModelImage(make, model.join(' ')).catch(() => ({ image: undefined }))
+      const modelName = model.join(' ').replace(/\s+(?:19|20)\d{2}$/, '')
+      const result = await findModelImage(make, modelName).catch(() => ({ image: undefined }))
       return { name: item.name, image: result.image }
     })).then((found) => {
       if (!active) return
