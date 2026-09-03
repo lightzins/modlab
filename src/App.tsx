@@ -6,7 +6,7 @@ import {
   CircleDollarSign, Clock3, Database, Eye, Gauge, Grid2X2,
   Bot, ImageOff, Languages, LoaderCircle, Menu, Moon, MoreHorizontal, Plus, Ruler, Save,
   LogOut, MessageCircle, Search, Send, Settings, ShieldCheck, SlidersHorizontal, Sparkles, Trash2,
-  KeyRound, Mail, UserRound, Wrench, X, Zap,
+  ImageUp, KeyRound, Mail, UserRound, Wrench, X, Zap,
 } from 'lucide-react'
 
 type NavItem = { label: string; title: string; description: string; icon: ComponentType<{ size?: number; strokeWidth?: number }> }
@@ -545,7 +545,6 @@ function DesignLab({ user, onSignOut }: { user?: User | null; onSignOut?: () => 
   const [configurationSaved, setConfigurationSaved] = useState(false)
   const [vehiclePickerOpen, setVehiclePickerOpen] = useState(false)
   const [vehicleSetupIndex, setVehicleSetupIndex] = useState<number | null>(null)
-  const [vehicleVersion, setVehicleVersion] = useState('')
   const [vehicleYear, setVehicleYear] = useState('')
   const [garageQuery, setGarageQuery] = useState('')
   const [garageMake, setGarageMake] = useState('Todos')
@@ -573,12 +572,15 @@ function DesignLab({ user, onSignOut }: { user?: User | null; onSignOut?: () => 
   const [vehicles, setVehicles] = useState(() => {
     type ShowcaseVehicle = { name: string; tag: string; power: string; progress: string; grade?: string; version?: string; year?: string; image?: string; imageYear?: number }
     try {
-      const stored = window.localStorage.getItem(`modlab-beta-v2-vehicles:${betaStorageScope}`)
+      const stored = window.localStorage.getItem(`modlab-beta-v3-vehicles:${betaStorageScope}`)
       return stored ? removeDuplicateVehicleImages(JSON.parse(stored) as ShowcaseVehicle[]) : []
     } catch { return [] }
   })
   useEffect(() => { window.localStorage.removeItem('modlab-showcase-catalog'); window.localStorage.removeItem('modlab-showcase-parts') }, [])
-  useEffect(() => { window.localStorage.setItem('modlab-showcase-section', section); window.localStorage.setItem('modlab-showcase-selected', selected); window.localStorage.setItem('modlab-showcase-vehicle', String(vehicleIndex)); window.localStorage.setItem('modlab-showcase-steps', JSON.stringify(buildSteps)); window.localStorage.setItem(`modlab-beta-v2-vehicles:${betaStorageScope}`, JSON.stringify(vehicles)) }, [section, selected, vehicleIndex, buildSteps, vehicles, betaStorageScope])
+  const [projectBackground, setProjectBackground] = useState(() => window.localStorage.getItem(`modlab-project-background:${betaStorageScope}`) ?? '')
+  const [photoStatus, setPhotoStatus] = useState('')
+  useEffect(() => { window.localStorage.setItem('modlab-showcase-section', section); window.localStorage.setItem('modlab-showcase-selected', selected); window.localStorage.setItem('modlab-showcase-vehicle', String(vehicleIndex)); window.localStorage.setItem('modlab-showcase-steps', JSON.stringify(buildSteps)); window.localStorage.setItem(`modlab-beta-v3-vehicles:${betaStorageScope}`, JSON.stringify(vehicles)) }, [section, selected, vehicleIndex, buildSteps, vehicles, betaStorageScope])
+  useEffect(() => { window.localStorage.setItem(`modlab-project-background:${betaStorageScope}`, projectBackground) }, [projectBackground, betaStorageScope])
   useEffect(() => { window.localStorage.setItem(`modlab-beta-v2-saved-parts:${betaStorageScope}`, JSON.stringify(savedParts)); window.localStorage.setItem(`modlab-beta-v2-parts:${betaStorageScope}`, JSON.stringify(marketParts)) }, [savedParts, marketParts, betaStorageScope])
   useEffect(() => { window.localStorage.removeItem('modlab-build-chat') }, [])
   useEffect(() => { window.localStorage.setItem(chatStorageKey, JSON.stringify(buildChatMessages)); buildChatEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }) }, [buildChatMessages, buildChatStatus, chatStorageKey])
@@ -596,25 +598,13 @@ function DesignLab({ user, onSignOut }: { user?: User | null; onSignOut?: () => 
     return () => { active = false }
   }, [user?.id])
   useEffect(() => {
-    let cancelled = false
-    const hydrateCatalogImages = async () => {
-      const missingImages = vehicles.filter((item) => !item.image).slice(0, 256)
-      for (let position = 0; position < missingImages.length; position += 8) {
-        const batch = missingImages.slice(position, position + 8)
-        const found = await Promise.all(batch.map(async (item) => {
-          const [make, ...model] = item.name.replace('1969', '').split(' ')
-          const image = await findModelImage(make, model.join(' '), Number(item.year) || undefined).then((result) => result.image).catch(() => undefined)
-          return { name: item.name, image }
-        }))
-        if (cancelled) return
-        const images = new Map(found.filter((item): item is { name: string; image: string } => Boolean(item.image)) .map((item) => [item.name, item.image]))
-        if (images.size) setVehicles((currentVehicles) => removeDuplicateVehicleImages(currentVehicles.map((candidate) => images.has(candidate.name) ? { ...candidate, image: images.get(candidate.name) } : candidate)))
-      }
-    }
-    void hydrateCatalogImages()
-    return () => { cancelled = true }
-  // As imagens ausentes são carregadas uma vez e cacheadas no navegador.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    let active = true
+    void fetch('/api/vehicle-catalog').then(async (response) => {
+      const payload = await response.json() as { vehicles?: Array<{ make: string; model: string }> }
+      if (!active || !response.ok || !payload.vehicles?.length) return
+      setVehicles(payload.vehicles.map((item) => ({ name: `${item.make} ${item.model}`, tag: 'Modelo do catálogo público. Inicie uma build para personalizar.', power: '', progress: '0' })))
+    }).catch(() => undefined)
+    return () => { active = false }
   }, [])
   const options = {
     Performance: { icon: Gauge, title: 'Performance', description: 'Potência, resposta e confiabilidade do conjunto.', items: ['Stage 1 ECU', 'Stage 2 ECU', 'Turbo upgrade'] },
@@ -629,17 +619,30 @@ function DesignLab({ user, onSignOut }: { user?: User | null; onSignOut?: () => 
   const openVehicleSetup = (index: number) => {
     const candidate = vehicles[index]
     setVehicleSetupIndex(index)
-    setVehicleVersion(candidate?.version ?? '')
     setVehicleYear(candidate?.year ?? '')
   }
   const confirmVehicleSetup = (event: FormEvent) => {
     event.preventDefault()
-    if (vehicleSetupIndex === null || !vehicleVersion.trim() || !vehicleYear.trim()) return
-    setVehicles((items) => items.map((item, index) => index === vehicleSetupIndex ? { ...item, version: vehicleVersion.trim(), year: vehicleYear.trim(), tag: `${vehicleVersion.trim()} · ${vehicleYear.trim()} · build em planejamento` } : item))
+    if (vehicleSetupIndex === null) return
+    setVehicles((items) => items.map((item, index) => index === vehicleSetupIndex ? { ...item, year: vehicleYear.trim() || undefined, tag: 'Build em planejamento' } : item))
     setVehicleIndex(vehicleSetupIndex)
     setVehicleSetupIndex(null)
     setVehiclePickerOpen(false)
     setScreen('TUNING')
+  }
+  const uploadProjectPhoto = async (file?: File) => {
+    if (!file) return
+    if (!/^image\/(jpeg|png|webp)$/.test(file.type) || file.size > 10 * 1024 * 1024) { setPhotoStatus('Use JPG, PNG ou WebP de até 10 MB.'); return }
+    if (!supabase || !user) { setPhotoStatus('Entre em uma conta para guardar a foto do projeto.'); return }
+    setPhotoStatus('Enviando foto...')
+    const extension = file.type.split('/')[1] === 'jpeg' ? 'jpg' : file.type.split('/')[1]
+    const path = `${user.id}/${Date.now()}.${extension}`
+    const { error } = await supabase.storage.from('project-images').upload(path, file, { contentType: file.type, upsert: false })
+    if (error) { setPhotoStatus(`Não foi possível enviar: ${error.message}`); return }
+    const signed = await supabase.storage.from('project-images').createSignedUrl(path, 60 * 60 * 24 * 365)
+    if (signed.error || !signed.data?.signedUrl) { setPhotoStatus('A foto foi enviada, mas não pôde ser aberta.'); return }
+    setProjectBackground(signed.data.signedUrl)
+    setPhotoStatus('Foto aplicada ao fundo da sua build.')
   }
   const totalSaved = savedParts.reduce((sum, partId) => sum + (marketParts.find((part) => part.id === partId)?.price ?? 0), 0)
   const addMarketPart = (event: FormEvent) => {
@@ -723,7 +726,7 @@ function DesignLab({ user, onSignOut }: { user?: User | null; onSignOut?: () => 
   const garageMakes = ['Todos', ...Array.from(new Set(vehicles.map((car) => car.name.split(' ')[0]))).slice(0, 9)]
   const filteredGarageVehicles = visibleVehicles.filter((car) => garageMake === 'Todos' || car.name.startsWith(`${garageMake} `))
   const vehicleSetup = vehicleSetupIndex === null ? null : vehicles[vehicleSetupIndex]
-  const vehicleSetupModal = vehicleSetup ? <div className="vehicle-picker-backdrop" role="dialog" aria-modal="true" aria-label="Configurar veículo"><form className="vehicle-setup" onSubmit={confirmVehicleSetup}><header><div><span className="eyebrow">ETAPA 02 / 02</span><h2>Defina seu carro.</h2><p>{vehicleSetup.name} foi selecionado. Informe a versão e o ano para iniciar uma build coerente.</p></div><button type="button" aria-label="Fechar" onClick={() => setVehicleSetupIndex(null)}><X size={18} /></button></header><div className="vehicle-setup__vehicle">{vehicleSetup.image ? <img src={vehicleSetup.image} alt="" /> : <span><ImageOff size={22} /></span>}<strong>{vehicleSetup.name}</strong></div><label>VERSÃO / MODELO<input value={vehicleVersion} onChange={(event) => setVehicleVersion(event.target.value)} placeholder="Ex.: Touring 1.5 Turbo" autoFocus required /></label><label>ANO DO VEÍCULO<input inputMode="numeric" pattern="[0-9]{4}" min="1950" max="2030" value={vehicleYear} onChange={(event) => setVehicleYear(event.target.value.replace(/[^0-9]/g, '').slice(0, 4))} placeholder="Ex.: 2020" required /></label><footer><span>Os dados servem para filtrar peças e confirmar especificações depois.</span><button type="submit">Continuar para a oficina <ChevronRight size={16} /></button></footer></form></div> : null
+  const vehicleSetupModal = vehicleSetup ? <div className="vehicle-picker-backdrop" role="dialog" aria-modal="true" aria-label="Configurar veículo"><form className="vehicle-setup" onSubmit={confirmVehicleSetup}><header><div><span className="eyebrow">INICIAR BUILD</span><h2>Esse é o seu carro?</h2><p>{vehicleSetup.name} será adicionado ao seu projeto. O ano é opcional.</p></div><button type="button" aria-label="Fechar" onClick={() => setVehicleSetupIndex(null)}><X size={18} /></button></header><div className="vehicle-setup__vehicle">{vehicleSetup.image ? <img src={vehicleSetup.image} alt="" /> : <span><CarFront size={22} /></span>}<strong>{vehicleSetup.name}</strong></div><label>ANO DO VEÍCULO <small>(opcional)</small><input inputMode="numeric" pattern="[0-9]{4}" min="1950" max="2030" value={vehicleYear} onChange={(event) => setVehicleYear(event.target.value.replace(/[^0-9]/g, '').slice(0, 4))} placeholder="Ex.: 2020" autoFocus /></label><footer><span>Você poderá adicionar uma foto real na próxima tela.</span><button type="submit">Abrir oficina <ChevronRight size={16} /></button></footer></form></div> : null
   const vehiclePicker = vehiclePickerOpen ? <div className="vehicle-picker-backdrop" role="dialog" aria-modal="true" aria-label="Trocar veículo"><section className="vehicle-picker"><header><div><span className="eyebrow">GARAGEM MODLAB</span><h2>Escolha seu veículo</h2><p>Selecione um projeto e confirme versão e ano antes de personalizar.</p></div><button aria-label="Fechar seletor" onClick={() => setVehiclePickerOpen(false)}><X size={18} /></button></header><div className="vehicle-picker__list">{vehicles.slice(0, 12).map((car, index) => <button className={vehicleIndex === index ? 'selected' : ''} key={car.name} onClick={() => openVehicleSetup(index)}>{car.image ? <img src={car.image} alt="" /> : <span><ImageOff size={16} /></span>}<div><small>MODELO {String(index + 1).padStart(3, '0')}</small><strong>{car.name}</strong><em>{car.version && car.year ? `${car.version} · ${car.year}` : 'Informe versão e ano'}</em></div>{vehicleIndex === index && <Check size={16} />}</button>)}</div><footer><button onClick={() => { setVehiclePickerOpen(false); setScreen('GARAGEM') }}><Search size={15} /> Ver catálogo completo</button><span>{vehicles.length} modelos no catálogo local</span></footer></section></div> : null
   const renderShowcaseHeader = () => <><header className="showcase-header"><a className="showcase-brand" href="/"><img src="/modlab-logo.png" alt="Modlab" /><strong>MODLAB</strong></a><nav>{['GARAGEM', 'BUILD', 'TUNING', 'MERCADO'].map((item) => <button onClick={() => setScreen(item)} className={item === screen ? 'active' : ''} key={item}>{item}</button>)}</nav><div className="showcase-profile"><i />{user ? <><span title={user.email}>{user.email}</span><button type="button" className="showcase-profile__account" onClick={() => setScreen('PERFIL')} title="Abrir perfil" aria-label="Abrir perfil"><UserRound size={15} /></button></> : <span>BETA LOCAL</span>}{onSignOut && <button type="button" onClick={onSignOut} title="Sair da conta" aria-label="Sair da conta"><LogOut size={14} /></button>}</div></header><div className="showcase-subnav"><span>{screen === 'GARAGEM' ? 'GARAGEM / CATÁLOGO DE VEÍCULOS' : screen === 'PERFIL' ? 'CONTA / PERFIL' : 'OFICINA / PERSONALIZAÇÃO'}</span><span>{user ? 'CONTA CONECTADA' : 'ALTERAÇÕES SALVAS NESTE DISPOSITIVO'}</span>{screen !== 'PERFIL' && <button onClick={() => setVehiclePickerOpen(true)}><CarFront size={15} /> Veículo atual</button>}</div>{vehiclePicker}{vehicleSetupModal}</>
   if (screen === 'PERFIL' && user) return <section className="showcase-site" aria-label="Perfil"><header className="showcase-header"><a className="showcase-brand" href="/"><img src="/modlab-logo.png" alt="Modlab" /><strong>MODLAB</strong></a><nav>{['GARAGEM', 'BUILD', 'TUNING', 'MERCADO'].map((item) => <button onClick={() => setScreen(item)} key={item}>{item}</button>)}</nav><div className="showcase-profile"><i /><span>{user.email}</span></div></header><ProfilePage user={user} onSignOut={onSignOut} onBack={() => setScreen('TUNING')} /></section>
@@ -736,16 +739,16 @@ function DesignLab({ user, onSignOut }: { user?: User | null; onSignOut?: () => 
         <input value={garageQuery} onChange={(event) => setGarageQuery(event.target.value)} placeholder="Buscar modelo" aria-label="Buscar carro no catálogo" autoFocus />
         <button type="submit" disabled={searchingGarage}>{searchingGarage ? 'Buscando...' : 'Buscar online'}</button>
       </form>
-      <div className="vertical-search-results">{visibleVehicles.length ? visibleVehicles.map((car) => { const index = vehicles.findIndex((item) => item.name === car.name); return <button key={car.name} onClick={() => openVehicleSetup(index)}>{car.image ? <img src={car.image} alt={car.name} /> : <span className="vertical-search-no-image"><ImageOff size={22} /> Imagem em validação</span>}<span><small>MODELO {String(index + 1).padStart(3, '0')}</small><strong>{car.name}</strong><em>{car.version && car.year ? `${car.version} · ${car.year}` : 'Clique para informar versão e ano'}</em></span><ChevronRight size={18} /></button> }) : <div className="empty-search"><Search size={28} /><strong>{garageSearchError ? 'A pesquisa não conseguiu concluir.' : 'Ainda não há resultados para esta busca.'}</strong><p>{garageSearchError || 'Clique em “Buscar online” para consultar a IA e adicionar veículos reais ao catálogo.'}</p></div>}</div>
+      <div className="vertical-search-results">{visibleVehicles.length ? visibleVehicles.map((car) => { const index = vehicles.findIndex((item) => item.name === car.name); return <button key={car.name} onClick={() => openVehicleSetup(index)}>{car.image ? <img src={car.image} alt={car.name} /> : <span className="vertical-search-no-image"><CarFront size={22} /> Projeto sem foto</span>}<span><small>MODELO {String(index + 1).padStart(3, '0')}</small><strong>{car.name}</strong><em>{car.year ? `Ano ${car.year}` : 'Clique para iniciar a build'}</em></span><ChevronRight size={18} /></button> }) : <div className="empty-search"><Search size={28} /><strong>{garageSearchError ? 'A pesquisa não conseguiu concluir.' : 'Ainda não há resultados para esta busca.'}</strong><p>{garageSearchError || 'Digite marca ou modelo para pesquisar no catálogo público.'}</p></div>}</div>
     </main>
     <footer className="showcase-footer"><button onClick={() => setGarageQuery('')}>Limpar busca e voltar à garagem</button><span><i /> {visibleVehicles.length} resultados</span></footer>
   </section>
   if (screen === 'TUNING') return <section className="showcase-site" aria-label="Oficina de personalização">
     {renderShowcaseHeader()}
     <main className="showcase-main">
-      <div className="showcase-photo">{vehicle.image ? <img src={vehicle.image} alt={vehicle.name} /> : <div className="showcase-no-image"><ImageOff size={32} /> Imagem do modelo em validação</div>}<div className="showcase-light" /></div>
-      <section className="showcase-identity"><span className="eyebrow">BUILD ATIVA · {vehicle.version && vehicle.year ? `${vehicle.version} / ${vehicle.year}` : 'VEÍCULO A CONFIGURAR'}</span><h1>{vehicle.name}</h1><p>{vehicle.tag}</p><div className="showcase-stats"><article><small>POTÊNCIA</small><strong>{vehicle.power === '—' ? 'N/D' : <>{vehicle.power}<em> cv</em></>}</strong></article><article><small>VERSÃO</small><strong>{vehicle.version ?? '—'}</strong></article><article><small>BUILD</small><strong>{vehicle.progress}<em>%</em></strong></article></div><div className="showcase-meter"><span><b>ÍNDICE DE PREPARO</b><b>{vehicle.progress}%</b></span><i style={{ width: `${vehicle.progress}%` }} /></div></section>
-      <aside className="showcase-config"><header><span><Icon size={20} /></span><div><small>AJUSTE ATUAL</small><strong>{current.title}</strong></div></header><p>{current.description}</p><div>{current.items.map((item, index) => <button className={selected === item ? 'selected' : ''} key={item} onClick={() => setSelected(item)}><b>{String(index + 1).padStart(2, '0')}</b><span>{item}</span>{selected === item ? <Check size={15} /> : <Plus size={15} />}</button>)}</div><footer><span>SELECIONADO</span><strong>{selected}</strong><button onClick={saveConfiguration}>{configurationSaved ? <><Check size={13} /> Salvo</> : <><Save size={13} /> Salvar ajuste</>}</button></footer></aside>
+      <div className="showcase-photo">{projectBackground ? <img src={projectBackground} alt="Foto do projeto" /> : <div className="showcase-no-image"><CarFront size={32} /> Adicione uma foto real do seu projeto</div>}<div className="showcase-light" /></div>
+      <section className="showcase-identity"><span className="eyebrow">BUILD ATIVA {vehicle.year ? `· ${vehicle.year}` : ''}</span><h1>{vehicle.name}</h1><p>{vehicle.tag}</p><div className="showcase-stats"><article><small>BUILD</small><strong>{vehicle.progress}<em>%</em></strong></article></div><div className="showcase-meter"><span><b>ÍNDICE DE PREPARO</b><b>{vehicle.progress}%</b></span><i style={{ width: `${vehicle.progress}%` }} /></div></section>
+      <aside className="showcase-config"><header><span><Icon size={20} /></span><div><small>AJUSTE ATUAL</small><strong>{current.title}</strong></div></header><p>{current.description}</p><div>{current.items.map((item, index) => <button className={selected === item ? 'selected' : ''} key={item} onClick={() => setSelected(item)}><b>{String(index + 1).padStart(2, '0')}</b><span>{item}</span>{selected === item ? <Check size={15} /> : <Plus size={15} />}</button>)}</div><footer><span>FOTO DO PROJETO</span><label className="project-photo-upload"><ImageUp size={14} /> {projectBackground ? 'Trocar foto' : 'Adicionar foto'}<input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => void uploadProjectPhoto(event.target.files?.[0])} /></label>{photoStatus && <small className="project-photo-status">{photoStatus}</small>}<button onClick={saveConfiguration}>{configurationSaved ? <><Check size={13} /> Salvo</> : <><Save size={13} /> Salvar ajuste</>}</button></footer></aside>
     </main>
     <nav className="showcase-actions" aria-label="Categorias de personalização">{Object.entries(options).map(([name, option]) => { const ActionIcon = option.icon; return <button className={section === name ? 'active' : ''} key={name} onClick={() => { setSection(name); setSelected(option.items[0]) }}><span><ActionIcon size={21} /></span><strong>{name}</strong><small>{name === 'Performance' ? 'motor & transmissão' : name === 'Visual' ? 'estilo & acabamento' : name === 'Dinâmica' ? 'suspensão & grip' : 'planejamento guiado'}</small></button> })}</nav>
     <footer className="showcase-footer"><span><b>SELECIONE UM MÓDULO</b> para editar sua build</span><span><i /> Dados incompletos nunca recebem potência estimada</span></footer>
@@ -780,7 +783,7 @@ function DesignLab({ user, onSignOut }: { user?: User | null; onSignOut?: () => 
       <header className="garage-redesign__hero"><div><span className="eyebrow">VEHICLE FINDER</span><h1>Qual carro<br />vai virar <i>build?</i></h1><p>Encontre o modelo primeiro. Depois, informe a versão e o ano para começar o projeto corretamente.</p></div><aside><span>CATÁLOGO ATIVO</span><strong>{vehicles.length}</strong><small>modelos disponíveis</small></aside></header>
       <form className="garage-search" onSubmit={searchGarage}><Search size={21} /><input value={garageQuery} onChange={(event) => setGarageQuery(event.target.value)} placeholder="Digite marca ou modelo: Civic, Opala, Gol, GT-R..." aria-label="Buscar carro no catálogo" /><button type="submit" disabled={searchingGarage}>{searchingGarage ? 'Buscando...' : 'Buscar'}</button></form>
       <div className="garage-makes">{garageMakes.map((make) => <button className={garageMake === make ? 'active' : ''} key={make} onClick={() => setGarageMake(make)}>{make}</button>)}</div>
-      <section className="garage-redesign__results"><header><div><span className="eyebrow">RESULTADOS</span><h2>{filteredGarageVehicles.length} modelos encontrados</h2></div><span>Escolha um carro para definir versão e ano</span></header>{garageSearchError && <p className="garage-search-error">{garageSearchError}</p>}{filteredGarageVehicles.length ? <div className="garage-vehicle-grid">{filteredGarageVehicles.slice(0, 48).map((car) => { const index = vehicles.findIndex((item) => item.name === car.name); return <button key={car.name} onClick={() => openVehicleSetup(index)}>{car.image ? <img src={car.image} alt={car.name} /> : <span className="garage-vehicle-grid__empty"><ImageOff size={22} /></span>}<div><small>MODELO {String(index + 1).padStart(3, '0')}</small><strong>{car.name}</strong><em>{car.version && car.year ? `${car.version} · ${car.year}` : 'Selecionar veículo'}</em></div><ChevronRight size={17} /></button> })}</div> : <div className="beta-start"><CarFront size={27} /><strong>Comece adicionando seu primeiro veículo.</strong><p>Digite marca e modelo no campo acima e clique em Buscar. Depois, informe a versão e o ano para iniciar a build.</p></div>}</section>
+      <section className="garage-redesign__results"><header><div><span className="eyebrow">RESULTADOS</span><h2>{filteredGarageVehicles.length} modelos encontrados</h2></div><span>Escolha um carro para iniciar uma build</span></header>{garageSearchError && <p className="garage-search-error">{garageSearchError}</p>}{filteredGarageVehicles.length ? <div className="garage-vehicle-grid">{filteredGarageVehicles.slice(0, 48).map((car) => { const index = vehicles.findIndex((item) => item.name === car.name); return <button key={car.name} onClick={() => openVehicleSetup(index)}>{car.image ? <img src={car.image} alt={car.name} /> : <span className="garage-vehicle-grid__empty"><CarFront size={22} /></span>}<div><small>MODELO {String(index + 1).padStart(3, '0')}</small><strong>{car.name}</strong><em>{car.year ? `Ano ${car.year}` : 'Iniciar build'}</em></div><ChevronRight size={17} /></button> })}</div> : <div className="beta-start"><CarFront size={27} /><strong>Catálogo de veículos carregando.</strong><p>Você poderá pesquisar por marca ou modelo assim que os modelos públicos estiverem disponíveis.</p></div>}</section>
     </main>
     <footer className="showcase-footer"><span><b>CATÁLOGO DE DESCOBERTA</b> escolha o modelo e informe os dados na próxima etapa</span><span><i /> Dados armazenados neste dispositivo</span></footer>
   </section>
