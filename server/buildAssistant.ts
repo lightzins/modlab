@@ -20,6 +20,11 @@ type GeminiResponse = {
   error?: { message?: string }
 }
 
+type GroqResponse = {
+  choices?: Array<{ message?: { content?: string } }>
+  error?: { message?: string }
+}
+
 export class GeminiRateLimitError extends Error {}
 
 const wait = (milliseconds: number) => new Promise<void>((resolve) => setTimeout(resolve, milliseconds))
@@ -30,6 +35,34 @@ export async function runBuildAssistant(
   history: BuildAssistantMessage[],
   context: BuildAssistantContext,
 ) {
+  const groqApiKey = process.env.GROQ_API_KEY
+  if (groqApiKey) {
+    const prompt = [
+      'Você é o assistente técnico automotivo do Modlab. Responda em português do Brasil.',
+      'Use pesquisa web quando ela ajudar a confirmar especificações, compatibilidade ou opções de peças.',
+      'Ajude a planejar builds realistas, por etapas, considerando uso, orçamento, confiabilidade e segurança.',
+      'Não invente potência, compatibilidade, legislação ou preço. Diferencie dados confirmados de estimativas.',
+      'Recomendações remotas não substituem inspeção e instalação por profissional qualificado.',
+      `Contexto atual da build: ${JSON.stringify(context)}.`,
+    ].join('\n')
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${groqApiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: process.env.GROQ_MODEL || 'groq/compound', messages: [
+        { role: 'system', content: prompt },
+        ...history.slice(-4).map((item) => ({ role: item.role, content: item.content.slice(0, 1_200) })),
+        { role: 'user', content: message },
+      ], temperature: 0.3, max_tokens: 550 }),
+    })
+    const payload = await response.json() as GroqResponse
+    if (!response.ok) {
+      if (response.status === 429) throw new GeminiRateLimitError('Limite temporário da IA atingido. Aguarde alguns minutos antes de tentar novamente.')
+      throw new Error(payload.error?.message || 'A IA não conseguiu responder agora.')
+    }
+    const answer = payload.choices?.[0]?.message?.content?.trim()
+    if (!answer) throw new Error('A IA retornou uma resposta vazia.')
+    return { message: answer, responseId: undefined, sources: [] as Array<{ title: string; url: string }> }
+  }
   const model = process.env.GEMINI_BUILD_MODEL || process.env.GEMINI_MODEL || 'gemini-3.7-flash'
   const requestBody = JSON.stringify({
       systemInstruction: {

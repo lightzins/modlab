@@ -9,7 +9,7 @@ export default async function handler(request: any, response: any) {
     if (error instanceof AuthenticationError) return response.status(401).json({ error: error.message, code: 'AUTH_REQUIRED' })
     return response.status(503).json({ error: error instanceof Error ? error.message : 'Autenticação indisponível.' })
   }
-  const apiKey = process.env.GEMINI_API_KEY
+  const apiKey = process.env.GROQ_API_KEY || process.env.GEMINI_API_KEY
   if (!apiKey) return response.status(503).json({ error: 'Pesquisa por IA ainda não configurada.', code: 'AI_NOT_CONFIGURED' })
   try {
     const query = typeof request.body?.query === 'string' ? request.body.query : ''
