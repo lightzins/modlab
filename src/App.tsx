@@ -722,7 +722,19 @@ function DesignLab({ user, onSignOut }: { user?: User | null; onSignOut?: () => 
         if (!addition.image || !addition.imageYear) return nextVehicles
         return nextVehicles.map((currentVehicle, index) => index === existingIndex ? { ...currentVehicle, image: addition.image, imageYear: addition.imageYear, tag: addition.tag } : currentVehicle)
       }, currentVehicles))
-    } catch (error) { setGarageSearchError(error instanceof Error ? error.message : 'Não foi possível pesquisar veículos agora.') } finally { setSearchingGarage(false) }
+    } catch (error) {
+      const publicResults = await searchVehicles(query).catch(() => [])
+      const discoveredVehicles = publicResults.filter((result) => !result.id.startsWith('catalog-') && !result.id.startsWith('classic-'))
+      if (discoveredVehicles.length) {
+        setVehicles((currentVehicles) => discoveredVehicles.reduce((nextVehicles, result) => {
+          const addition = { name: `${result.make} ${result.model}`, tag: result.description || 'Modelo encontrado em fonte pública. Informe versão e ano para pesquisar a ficha técnica.', power: '—', progress: '0', image: result.image, imageYear: undefined, version: undefined, year: result.year ? String(result.year) : undefined }
+          return nextVehicles.some((currentVehicle) => normalizeText(currentVehicle.name) === normalizeText(addition.name)) ? nextVehicles : [...nextVehicles, addition]
+        }, currentVehicles))
+        setGarageSearchError('A pesquisa de ficha técnica pela IA está indisponível agora. Exibimos modelos encontrados em fontes públicas; confirme versão e potência antes da build.')
+      } else {
+        setGarageSearchError(error instanceof Error ? error.message : 'Não foi possível pesquisar veículos agora.')
+      }
+    } finally { setSearchingGarage(false) }
   }
   const visibleVehicles = vehicles.filter((car) => normalizeText(car.name).includes(normalizeText(garageQuery)))
   const garageMakes = ['Todos', ...Array.from(new Set(vehicles.map((car) => car.name.split(' ')[0]))).slice(0, 9)]
