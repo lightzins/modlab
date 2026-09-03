@@ -193,6 +193,34 @@ const brazilianClassics = [
 const normalizeText = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
 const displayName = (value: string) => value.toLowerCase().replace(/(^|[\s-])\S/g, (letter) => letter.toUpperCase())
 const displayMake = (value: string) => ({ bmw: 'BMW', gmc: 'GMC', mini: 'MINI', ram: 'RAM', fiat: 'FIAT' }[normalizeText(value)] ?? displayName(value))
+const splitAssistantSources = (content: string, suppliedSources?: Array<{ title: string; url: string }>) => {
+  const sourceSection = content.match(/(?:^|\n)\s*(?:#{1,6}\s*)?(?:fontes?|references?)\s*:?\s*\n([\s\S]*)$/i)
+  const mainContent = sourceSection ? content.slice(0, sourceSection.index).trim() : content
+  const discovered = [...(sourceSection?.[1].matchAll(/(?:\[([^\]]+)\]\()?((?:https?:\/\/)[^\s)\]]+)/g) ?? [])].flatMap((match) => {
+    try { return [{ title: match[1]?.trim() || new URL(match[2]).hostname.replace(/^www\./, ''), url: match[2] }] } catch { return [] }
+  })
+  const seen = new Set<string>()
+  const sources = [...(suppliedSources ?? []), ...discovered].filter((source) => {
+    if (!/^https?:\/\//i.test(source.url) || seen.has(source.url)) return false
+    seen.add(source.url)
+    return true
+  })
+  return { mainContent, sources }
+}
+const formatAssistantText = (content: string) => content.replace(/\r/g, '').split('\n')
+  .filter((line) => !/^\s*\|?\s*[:-]+(?:\s*\|\s*[:-]+)+\s*\|?\s*$/.test(line))
+  .map((line) => line
+    .replace(/^\s*#{1,6}\s*/, '')
+    .replace(/^\s*>\s*/, '')
+    .replace(/^\s*[-*+]\s+/, '• ')
+    .replace(/^\s*\|?\s*/, '')
+    .replace(/\s*\|\s*/g, ' · ')
+    .replace(/\s*\|\s*$/, '')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/__([^_]+)__/g, '$1')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/(^|[^*])\*([^*\n]+)\*/g, '$1$2'))
+  .join('\n').replace(/\n{3,}/g, '\n\n').trim()
 const highResolutionImage = (url?: string) => url?.replace(/\/\d+px-([^/]+)$/i, '/1920px-$1')
 const verifiedVehicleImages: Record<string, string> = {
   'chevrolet vectra 2009': 'https://upload.wikimedia.org/wikipedia/commons/b/b5/Chevrolet_Vectra_2009.JPG',
@@ -820,7 +848,7 @@ function DesignLab({ user, onSignOut }: { user?: User | null; onSignOut?: () => 
           <header className="build-ai-chat__header"><span><Bot size={17} /></span><div><strong>Assistente técnico</strong><small><i className={buildChatStatus === 'error' || buildChatStatus === 'unconfigured' ? 'warning' : ''} /> {buildChatStatus === 'loading' ? 'ANALISANDO SUA BUILD' : buildChatStatus === 'unconfigured' ? 'CONFIGURAÇÃO NECESSÁRIA' : 'PRONTO PARA PLANEJAR'}</small></div>{buildChatMessages.length > 0 && <button aria-label="Limpar conversa" title="Limpar conversa" onClick={() => void clearBuildChat()}><Trash2 size={15} /></button>}</header>
           <div className="build-ai-messages">
             {buildChatMessages.length === 0 && <div className="build-ai-empty"><span><Sparkles size={24} /></span><small>SEU COPILOTO DE PROJETO</small><h2>Comece sua primeira conversa.</h2><p>Descreva o objetivo da build, o uso do carro e o orçamento disponível.</p></div>}
-            {buildChatMessages.map((message) => <article className={`build-message ${message.role}`} key={message.id}><header>{message.role === 'assistant' ? <><Bot size={13} /> MODLAB IA</> : 'VOCÊ'}</header><p>{message.content}</p>{message.sources && message.sources.length > 0 && <footer><span>FONTES</span>{message.sources.map((source) => <a href={source.url} target="_blank" rel="noreferrer" key={source.url}>{source.title}</a>)}</footer>}</article>)}
+            {buildChatMessages.map((message) => { const parsed = message.role === 'assistant' ? splitAssistantSources(message.content, message.sources) : { mainContent: message.content, sources: [] as Array<{ title: string; url: string }> }; return <article className={`build-message ${message.role}`} key={message.id}><header>{message.role === 'assistant' ? <><Bot size={13} /> MODLAB IA</> : 'VOCÊ'}</header><p>{message.role === 'assistant' ? formatAssistantText(parsed.mainContent) : parsed.mainContent}</p>{parsed.sources.length > 0 && <footer className="build-message__sources"><span>FONTES CONSULTADAS</span>{parsed.sources.map((source) => <a href={source.url} target="_blank" rel="noreferrer" key={source.url}>{source.title}</a>)}</footer>}</article> })}
             {buildChatStatus === 'loading' && <div className="build-ai-thinking"><LoaderCircle size={15} /> Pesquisando e organizando a recomendação...</div>}
             {(buildChatStatus === 'unconfigured' || buildChatStatus === 'error') && <div className="build-ai-alert"><ShieldCheck size={16} /><div><strong>{buildChatStatus === 'unconfigured' ? 'Conecte a IA para continuar' : 'Não foi possível responder'}</strong><span>{buildChatError}</span></div></div>}
             <div ref={buildChatEndRef} />

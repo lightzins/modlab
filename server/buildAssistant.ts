@@ -43,6 +43,8 @@ export async function runBuildAssistant(
       'Ajude a planejar builds realistas, por etapas, considerando uso, orçamento, confiabilidade e segurança.',
       'Não invente potência, compatibilidade, legislação ou preço. Diferencie dados confirmados de estimativas.',
       'Recomendações remotas não substituem inspeção e instalação por profissional qualificado.',
+      'Use texto simples e legível: não use Markdown, asteriscos, hashtags, tabelas, blocos de citação, backticks ou emojis.',
+      'Quando houver links realmente verificados e disponíveis no contexto, termine com uma seção FONTES e uma URL por linha. Nunca invente links nem diga que pesquisou na web sem ter pesquisado.',
       `Contexto atual da build: ${JSON.stringify(context)}.`,
     ].join('\n')
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -71,6 +73,8 @@ export async function runBuildAssistant(
           'Ajude a planejar builds realistas, por etapas, considerando uso, orçamento, confiabilidade e segurança.',
           'Não invente potência, compatibilidade, legislação ou preço. Diferencie dados confirmados de estimativas.',
           'Recomendações remotas não substituem inspeção e instalação por profissional qualificado.',
+          'Use texto simples e legível: não use Markdown, asteriscos, hashtags, tabelas, blocos de citação, backticks ou emojis.',
+          'Quando houver links realmente verificados e disponíveis no contexto, termine com uma seção FONTES e uma URL por linha. Nunca invente links nem diga que pesquisou na web sem ter pesquisado.',
           `Contexto atual da build: ${JSON.stringify(context)}.`,
         ].join('\n') }],
       },

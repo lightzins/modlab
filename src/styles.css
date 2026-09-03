@@ -1107,6 +1107,9 @@ main { background: linear-gradient(135deg, #111 0%, #161616 54%, #111 100%); }
 .build-message footer { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(247,247,247,.08); }
 .build-message footer span { width: 100%; color: #777; font-size: 6px; font-weight: 800; letter-spacing: .7px; }
 .build-message footer a { color: var(--ml-green); font-size: 7px; text-decoration: none; }
+.build-message__sources { display: grid !important; gap: 7px !important; margin-top: 13px !important; padding: 10px 11px !important; border: 1px solid rgba(0,245,160,.18) !important; border-left: 2px solid var(--ml-green) !important; border-radius: 5px; background: rgba(0,245,160,.045); }
+.build-message__sources a { overflow: hidden; padding: 7px 8px; border: 1px solid rgba(247,247,247,.1); border-radius: 4px; color: #dfffee !important; background: rgba(0,0,0,.15); font-size: 8px !important; text-overflow: ellipsis; white-space: nowrap; }
+.build-message__sources a:hover { border-color: rgba(0,245,160,.55); color: var(--ml-green) !important; }
 .build-ai-thinking, .build-ai-alert { display: flex; align-items: center; gap: 8px; margin: 7px 0 12px; padding: 11px 13px; color: #a8a8a8; background: rgba(0,245,160,.045); font-size: 8px; }
 .build-ai-thinking svg { color: var(--ml-green); animation: spin 1s linear infinite; }
 .build-ai-alert { align-items: flex-start; border-left: 2px solid #f3ad4a; background: rgba(243,173,74,.07); }
