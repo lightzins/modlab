@@ -793,6 +793,7 @@ main { background: linear-gradient(135deg, #111 0%, #161616 54%, #111 100%); }
 .showcase-site { position: relative; isolation: isolate; background-image: linear-gradient(rgba(255,255,255,.022) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.022) 1px, transparent 1px), radial-gradient(circle at 80% 8%, rgba(255,0,110,.13), transparent 30%), #090909; background-size: 34px 34px, 34px 34px, auto, auto; }
 .showcase-header { height: 70px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 25px; padding: 0 clamp(18px, 4vw, 62px); border-bottom: 1px solid rgba(247,247,247,.1); background: rgba(11,11,11,.94); }
 .showcase-brand { display: inline-flex; align-items: center; gap: 9px; color: #f7f7f7; text-decoration: none; font-size: 12px; letter-spacing: 1.2px; }
+.showcase-brand em { margin-left: 3px; color: var(--ml-green); font-size: 8px; font-style: normal; letter-spacing: .8px; }
 .showcase-brand img { width: 31px; height: 31px; border-radius: 8px; object-fit: cover; box-shadow: 0 0 0 1px rgba(0,245,160,.38); }
 .showcase-header nav { display: flex; align-self: stretch; }
 .showcase-header nav button { position: relative; padding: 0 13px; border: 0; color: #9c9c9c; background: transparent; cursor: pointer; font-size: 8px; font-weight: 700; letter-spacing: .65px; }
@@ -841,6 +842,7 @@ main { background: linear-gradient(135deg, #111 0%, #161616 54%, #111 100%); }
 .showcase-config > div button.selected { border-color: rgba(0,245,160,.42); color: var(--ml-green); background: rgba(0,245,160,.08); }
 .showcase-config > div b { color: var(--ml-pink); font-size: 7px; }
 .showcase-config > div button span { font-size: 8px; }
+.showcase-config__empty { padding: 14px 13px; color: #aaa; font-size: 8px; line-height: 1.55; }
 .showcase-config footer { display: grid; gap: 4px; padding: 10px 13px; border-top: 1px solid rgba(247,247,247,.08); background: rgba(0,0,0,.18); }
 .showcase-config footer span { color: #969696; font-size: 5.5px; font-weight: 700; letter-spacing: .7px; }
 .showcase-config footer strong { overflow: hidden; color: #f7f7f7; font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
