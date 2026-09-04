@@ -43,6 +43,9 @@ export async function runBuildAssistant(
       'Ajude a planejar builds realistas, por etapas, considerando uso, orçamento, confiabilidade e segurança.',
       'Não invente potência, compatibilidade, legislação ou preço. Diferencie dados confirmados de estimativas.',
       'Recomendações remotas não substituem inspeção e instalação por profissional qualificado.',
+      'Quando o usuário pedir uma build ou lista de peças, entregue o máximo de informações úteis em seções curtas: objetivo e premissas; compatibilidade; peças principais; peças auxiliares e consumíveis; fixadores, parafusos, abraçadeiras, juntas e mangueiras; ferramentas e mão de obra; sequência de instalação; testes após montagem; custos; riscos, legalização e manutenção.',
+      'Para torque, medida, passo, grau de parafuso, código de peça ou compatibilidade específica, informe o valor apenas quando ele estiver confirmado. Sem confirmação, escreva claramente “confirmar no manual de serviço ou com o fornecedor”; nunca chute esses dados.',
+      'Inclua sempre itens frequentemente esquecidos, como juntas, retentores, fluidos, filtros, abraçadeiras, conectores, fusíveis, chicotes, mangueiras, parafusos e reaperto, mas explique que a necessidade depende da aplicação e da inspeção do veículo.',
       'Use texto simples e legível: não use Markdown, asteriscos, hashtags, tabelas, blocos de citação, backticks ou emojis.',
       'Quando houver links realmente verificados e disponíveis no contexto, termine com uma seção FONTES e uma URL por linha. Nunca invente links nem diga que pesquisou na web sem ter pesquisado.',
       `Contexto atual da build: ${JSON.stringify(context)}.`,
@@ -54,7 +57,7 @@ export async function runBuildAssistant(
         { role: 'system', content: prompt },
         ...history.slice(-4).map((item) => ({ role: item.role, content: item.content.slice(0, 1_200) })),
         { role: 'user', content: message },
-      ], temperature: 0.3, max_tokens: 550 }),
+      ], temperature: 0.3, max_tokens: 850 }),
     })
     const payload = await response.json() as GroqResponse
     if (!response.ok) {
@@ -73,6 +76,9 @@ export async function runBuildAssistant(
           'Ajude a planejar builds realistas, por etapas, considerando uso, orçamento, confiabilidade e segurança.',
           'Não invente potência, compatibilidade, legislação ou preço. Diferencie dados confirmados de estimativas.',
           'Recomendações remotas não substituem inspeção e instalação por profissional qualificado.',
+          'Quando o usuário pedir uma build ou lista de peças, entregue o máximo de informações úteis em seções curtas: objetivo e premissas; compatibilidade; peças principais; peças auxiliares e consumíveis; fixadores, parafusos, abraçadeiras, juntas e mangueiras; ferramentas e mão de obra; sequência de instalação; testes após montagem; custos; riscos, legalização e manutenção.',
+          'Para torque, medida, passo, grau de parafuso, código de peça ou compatibilidade específica, informe o valor apenas quando ele estiver confirmado. Sem confirmação, escreva claramente “confirmar no manual de serviço ou com o fornecedor”; nunca chute esses dados.',
+          'Inclua sempre itens frequentemente esquecidos, como juntas, retentores, fluidos, filtros, abraçadeiras, conectores, fusíveis, chicotes, mangueiras, parafusos e reaperto, mas explique que a necessidade depende da aplicação e da inspeção do veículo.',
           'Use texto simples e legível: não use Markdown, asteriscos, hashtags, tabelas, blocos de citação, backticks ou emojis.',
           'Quando houver links realmente verificados e disponíveis no contexto, termine com uma seção FONTES e uma URL por linha. Nunca invente links nem diga que pesquisou na web sem ter pesquisado.',
           `Contexto atual da build: ${JSON.stringify(context)}.`,
@@ -82,7 +88,7 @@ export async function runBuildAssistant(
         ...history.slice(-4).map((item) => ({ role: item.role === 'assistant' ? 'model' : 'user', parts: [{ text: item.content.slice(0, 1_200) }] })),
         { role: 'user', parts: [{ text: message }] },
       ],
-      generationConfig: { temperature: 0.3, maxOutputTokens: 550 },
+      generationConfig: { temperature: 0.3, maxOutputTokens: 850 },
     })
   let response: Response | undefined
   let payload: GeminiResponse = {}
