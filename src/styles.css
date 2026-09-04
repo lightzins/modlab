@@ -48,6 +48,7 @@ main { grid-column: 2; min-width: 0; min-height: 100vh; padding: 34px 34px 42px;
 .auth-card .auth-message.success { color: #80e4b3; }
 .auth-card .auth-message.error { color: #ffaaa1; }
 .auth-link { width: auto; margin-top: 18px; padding: 0 !important; color: #9ee3c4 !important; background: transparent !important; font-size: 13px !important; font-weight: 600 !important; }
+.auth-card .auth-retry { display: inline; margin: 0 0 0 6px; color: #fff !important; text-decoration: underline; }
 
 .profile-page { min-height: calc(100vh - 107px); display: grid; place-items: center; padding: 42px 24px; background: radial-gradient(circle at 70% 10%, rgba(0,245,160,.12), transparent 28%), #111; }
 .profile-card { width: min(100%, 470px); padding: 32px; border: 1px solid rgba(247,247,247,.12); border-radius: 16px; background: #1a1a1a; box-shadow: 0 24px 60px rgba(0,0,0,.32); }

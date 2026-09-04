@@ -16,6 +16,18 @@ type VehicleSearchResult = { id: string; make: string; model: string; year: numb
 type GarageProject = { car: Car; name: string; status: string; progress: number; updated: string }
 type BuildChatMessage = { id: string; role: 'user' | 'assistant'; content: string; sources?: Array<{ title: string; url: string }> }
 type MarketPart = { id: string; name: string; category: string; supplier: string; price: number; url?: string; saved: boolean; type?: string }
+type ShowcaseVehicle = { name: string; tag: string; power: string; progress: string; grade?: string; version?: string; year?: string; image?: string; imageYear?: number }
+type UserWorkspace = {
+  version: 1
+  section: string
+  selected: string
+  vehicleIndex: number
+  buildSteps: boolean[]
+  savedParts: string[]
+  marketParts: MarketPart[]
+  vehicles: ShowcaseVehicle[]
+  projectBackground: string
+}
 
 async function getAuthenticatedHeaders() {
   const { data: { session } } = await supabase?.auth.getSession() ?? { data: { session: null } }
@@ -31,10 +43,12 @@ const readableAuthError = (message: string) => {
   if (normalized.includes('already registered') || normalized.includes('already been registered')) return 'Este e-mail já possui uma conta. Tente entrar.'
   if (normalized.includes('password should be at least')) return 'A senha precisa ter pelo menos 6 caracteres.'
   if (normalized.includes('rate limit') || normalized.includes('email rate limit')) return 'Muitas tentativas de e-mail. Aguarde alguns minutos antes de tentar novamente.'
+  if (normalized.includes('invalid api key') || normalized.includes('jwt')) return 'A conexão com o Supabase está inválida. Revise a Publishable key configurada na Vercel.'
+  if (normalized.includes('abort') || normalized.includes('timeout') || normalized.includes('fetch') || normalized.includes('network')) return 'Não foi possível alcançar o Supabase. Verifique sua conexão e as variáveis da Vercel.'
   return 'Não foi possível concluir agora. Verifique sua conexão e tente novamente.'
 }
 
-function LoginPage({ recoveryUser, onRecoveryDone }: { recoveryUser?: User | null; onRecoveryDone?: () => void }) {
+function LoginPage({ recoveryUser, onRecoveryDone, authNotice, onRetryConnection }: { recoveryUser?: User | null; onRecoveryDone?: () => void; authNotice?: string; onRetryConnection?: () => void }) {
   const [mode, setMode] = useState<'login' | 'signup'>('login')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -45,14 +59,16 @@ function LoginPage({ recoveryUser, onRecoveryDone }: { recoveryUser?: User | nul
 
   const submit = async (event: FormEvent) => {
     event.preventDefault()
-    if (!supabase || !email.trim() || !password) return
+    const normalizedEmail = email.trim().toLowerCase()
+    if (!supabase || !normalizedEmail || !password) return
     if (mode === 'signup' && password !== passwordConfirmation) { setStatus('error'); setMessage('As senhas não são iguais.'); return }
+    if (mode === 'signup' && !name.trim()) { setStatus('error'); setMessage('Informe seu nome para criar a conta.'); return }
     setStatus('sending')
     setMessage('')
     try {
       const result = mode === 'signup'
-        ? await supabase.auth.signUp({ email: email.trim(), password, options: { data: { full_name: name.trim() }, emailRedirectTo: window.location.origin } })
-        : await supabase.auth.signInWithPassword({ email: email.trim(), password })
+        ? await supabase.auth.signUp({ email: normalizedEmail, password, options: { data: { full_name: name.trim() }, emailRedirectTo: `${window.location.origin}/` } })
+        : await supabase.auth.signInWithPassword({ email: normalizedEmail, password })
       if (result.error) { setStatus('error'); setMessage(readableAuthError(result.error.message)); return }
       setStatus('sent')
       setMessage(mode === 'signup' && !result.data.session ? 'Conta criada. Confirme seu e-mail para entrar.' : 'Acesso realizado com sucesso.')
@@ -63,7 +79,7 @@ function LoginPage({ recoveryUser, onRecoveryDone }: { recoveryUser?: User | nul
     if (!supabase || !email.trim()) { setStatus('error'); setMessage('Informe seu e-mail para recuperar a senha.'); return }
     setStatus('sending')
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: window.location.origin })
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), { redirectTo: `${window.location.origin}/` })
       setStatus(error ? 'error' : 'sent')
       setMessage(error ? readableAuthError(error.message) : 'Enviamos um link para redefinir sua senha.')
     } catch { setStatus('error'); setMessage('Falha de conexão. Tente novamente em alguns instantes.') }
@@ -90,13 +106,14 @@ function LoginPage({ recoveryUser, onRecoveryDone }: { recoveryUser?: User | nul
       <h1>{mode === 'login' ? 'Entre na sua garagem.' : 'Crie sua conta.'}</h1>
       <p>{mode === 'login' ? 'Acesse seus projetos usando e-mail e senha.' : 'Salve suas builds em uma conta pessoal.'}</p>
       <div className="auth-tabs"><button className={mode === 'login' ? 'active' : ''} type="button" onClick={() => { setMode('login'); setStatus('idle'); setMessage('') }}>Entrar</button><button className={mode === 'signup' ? 'active' : ''} type="button" onClick={() => { setMode('signup'); setStatus('idle'); setMessage('') }}>Criar conta</button></div>
+      {authNotice && <p className="auth-message error">{authNotice} {onRetryConnection && <button className="auth-link auth-retry" type="button" onClick={onRetryConnection}>Tentar novamente</button>}</p>}
       <form onSubmit={submit}>
-        {mode === 'signup' && <><label htmlFor="signup-name">Nome</label><div className="auth-input"><UserRound size={17} /><input id="signup-name" value={name} onChange={(event) => setName(event.target.value)} placeholder="Como quer ser chamado?" required /></div></>}
+        {mode === 'signup' && <><label htmlFor="signup-name">Nome</label><div className="auth-input"><UserRound size={17} /><input id="signup-name" value={name} onChange={(event) => setName(event.target.value)} placeholder="Como quer ser chamado?" autoComplete="name" required /></div></>}
         <label htmlFor="login-email">E-mail</label>
-        <div className="auth-input"><Mail size={17} /><input id="login-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="voce@exemplo.com" required /></div>
+        <div className="auth-input"><Mail size={17} /><input id="login-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="voce@exemplo.com" autoComplete="email" required /></div>
         <label htmlFor="login-password">Senha</label>
-        <div className="auth-input"><KeyRound size={17} /><input id="login-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Mínimo de 6 caracteres" minLength={6} required /></div>
-        {mode === 'signup' && <><label htmlFor="signup-password-confirmation">Confirmar senha</label><div className="auth-input"><KeyRound size={17} /><input id="signup-password-confirmation" type="password" value={passwordConfirmation} onChange={(event) => setPasswordConfirmation(event.target.value)} placeholder="Repita a senha" minLength={6} required /></div></>}
+        <div className="auth-input"><KeyRound size={17} /><input id="login-password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Mínimo de 6 caracteres" minLength={6} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} required /></div>
+        {mode === 'signup' && <><label htmlFor="signup-password-confirmation">Confirmar senha</label><div className="auth-input"><KeyRound size={17} /><input id="signup-password-confirmation" type="password" value={passwordConfirmation} onChange={(event) => setPasswordConfirmation(event.target.value)} placeholder="Repita a senha" minLength={6} autoComplete="new-password" required /></div></>}
         <button type="submit" disabled={status === 'sending'}>{status === 'sending' ? 'Aguarde...' : mode === 'login' ? 'Entrar na conta' : 'Criar minha conta'}</button>
       </form>
       {mode === 'login' && <button type="button" className="auth-link" onClick={() => void resetPassword()} disabled={status === 'sending'}>Esqueci minha senha</button>}
@@ -115,8 +132,9 @@ function ProfilePage({ user, onSignOut, onBack }: { user: User; onSignOut?: () =
     setStatus('saving')
     const displayName = name.trim()
     const { error } = await supabase.auth.updateUser({ data: { full_name: displayName } })
-    if (!error) await supabase.from('profiles').upsert({ id: user.id, display_name: displayName || null }, { onConflict: 'id' })
-    setStatus(error ? 'error' : 'saved')
+    if (error) { setStatus('error'); return }
+    const { error: profileError } = await supabase.from('profiles').upsert({ id: user.id, display_name: displayName || null }, { onConflict: 'id' })
+    setStatus(profileError ? 'error' : 'saved')
   }
   const initials = (name || user.email || 'M').trim().slice(0, 1).toUpperCase()
   return <main className="profile-page"><section className="profile-card"><header><button type="button" className="profile-back" onClick={onBack}>← Voltar para a oficina</button><span className="eyebrow">CONTA MODLAB</span><div className="profile-avatar">{initials}</div><h1>Seu perfil</h1><p>Gerencie os dados da sua conta e seus acessos.</p></header><form onSubmit={saveProfile}><label htmlFor="profile-name">Nome de exibição</label><input id="profile-name" value={name} onChange={(event) => setName(event.target.value)} placeholder="Seu nome" /><label>E-mail</label><div className="profile-email"><Mail size={16} />{user.email}</div><button type="submit" disabled={status === 'saving'}>{status === 'saving' ? 'Salvando...' : status === 'saved' ? 'Alterações salvas' : 'Salvar perfil'}</button>{status === 'error' && <p className="auth-message error">Não foi possível salvar agora.</p>}</form><footer><button type="button" onClick={onSignOut}><LogOut size={16} /> Sair da conta</button></footer></section></main>
@@ -592,6 +610,8 @@ function DesignLab({ user, onSignOut }: { user?: User | null; onSignOut?: () => 
   const catalogPhotoWorkerRef = useRef(false)
   const catalogPhotoAliveRef = useRef(true)
   const [catalogPhotoPreload, setCatalogPhotoPreload] = useState({ loaded: 0, total: 0, active: false })
+  const [workspaceReady, setWorkspaceReady] = useState(!user)
+  const [workspaceStatus, setWorkspaceStatus] = useState(user ? 'CONECTANDO CONTA' : 'ALTERAÇÕES SALVAS NESTE DISPOSITIVO')
   const persistChatMessage = async (message: BuildChatMessage) => {
     if (!supabase || !user) return
     await supabase.from('ai_conversations').insert({ user_id: user.id, role: message.role, content: message.content, sources: message.sources ?? [] })
@@ -604,7 +624,6 @@ function DesignLab({ user, onSignOut }: { user?: User | null; onSignOut?: () => 
     if (supabase && user) await supabase.from('ai_conversations').delete().eq('user_id', user.id)
   }
   const [vehicles, setVehicles] = useState(() => {
-    type ShowcaseVehicle = { name: string; tag: string; power: string; progress: string; grade?: string; version?: string; year?: string; image?: string; imageYear?: number }
     try {
       const stored = window.localStorage.getItem(`modlab-beta-v3-vehicles:${betaStorageScope}`)
       return stored ? removeDuplicateVehicleImages(JSON.parse(stored) as ShowcaseVehicle[]) : []
@@ -617,6 +636,50 @@ function DesignLab({ user, onSignOut }: { user?: User | null; onSignOut?: () => 
   useEffect(() => { window.localStorage.setItem('modlab-showcase-section', section); window.localStorage.setItem('modlab-showcase-selected', selected); window.localStorage.setItem('modlab-showcase-vehicle', String(vehicleIndex)); window.localStorage.setItem('modlab-showcase-steps', JSON.stringify(buildSteps)); window.localStorage.setItem(`modlab-beta-v3-vehicles:${betaStorageScope}`, JSON.stringify(vehicles)) }, [section, selected, vehicleIndex, buildSteps, vehicles, betaStorageScope])
   useEffect(() => { window.localStorage.setItem(`modlab-project-background:${betaStorageScope}`, projectBackground) }, [projectBackground, betaStorageScope])
   useEffect(() => { window.localStorage.setItem(`modlab-beta-v2-saved-parts:${betaStorageScope}`, JSON.stringify(savedParts)); window.localStorage.setItem(`modlab-beta-v2-parts:${betaStorageScope}`, JSON.stringify(marketParts)) }, [savedParts, marketParts, betaStorageScope])
+  useEffect(() => {
+    if (!supabase || !user) { setWorkspaceReady(true); setWorkspaceStatus('ALTERAÇÕES SALVAS NESTE DISPOSITIVO'); return }
+    const supabaseClient = supabase
+    let active = true
+    setWorkspaceReady(false)
+    setWorkspaceStatus('CARREGANDO CONTA')
+    void supabaseClient.from('user_workspaces').select('data').eq('user_id', user.id).maybeSingle().then(({ data, error }) => {
+      if (!active) return
+      if (error) {
+        setWorkspaceStatus('CONTA CONECTADA · SINCRONIZAÇÃO PENDENTE')
+        setWorkspaceReady(true)
+        return
+      }
+      const workspace = data?.data as Partial<UserWorkspace> | undefined
+      if (workspace?.version === 1) {
+        if (typeof workspace.section === 'string') setSection(workspace.section)
+        if (typeof workspace.selected === 'string') setSelected(workspace.selected)
+        if (typeof workspace.vehicleIndex === 'number' && workspace.vehicleIndex >= 0) setVehicleIndex(workspace.vehicleIndex)
+        if (Array.isArray(workspace.buildSteps)) setBuildSteps(workspace.buildSteps.slice(0, 4).map(Boolean))
+        if (Array.isArray(workspace.savedParts)) setSavedParts(workspace.savedParts.filter((item): item is string => typeof item === 'string'))
+        if (Array.isArray(workspace.marketParts)) setMarketParts(workspace.marketParts.filter((item): item is MarketPart => Boolean(item && typeof item.id === 'string' && typeof item.name === 'string' && typeof item.price === 'number')))
+        if (Array.isArray(workspace.vehicles)) setVehicles(removeDuplicateVehicleImages(workspace.vehicles.filter((item): item is ShowcaseVehicle => Boolean(item && typeof item.name === 'string'))))
+        if (typeof workspace.projectBackground === 'string') setProjectBackground(workspace.projectBackground)
+      }
+      setWorkspaceStatus('CONTA SINCRONIZADA')
+      setWorkspaceReady(true)
+    }, () => {
+      if (!active) return
+      setWorkspaceStatus('CONTA CONECTADA · SINCRONIZAÇÃO PENDENTE')
+      setWorkspaceReady(true)
+    })
+    return () => { active = false }
+  }, [user?.id])
+  useEffect(() => {
+    if (!supabase || !user || !workspaceReady) return
+    const supabaseClient = supabase
+    const timer = window.setTimeout(() => {
+      const data: UserWorkspace = { version: 1, section, selected, vehicleIndex, buildSteps, savedParts, marketParts, vehicles, projectBackground }
+      void supabaseClient.from('user_workspaces').upsert({ user_id: user.id, data }, { onConflict: 'user_id' }).then(({ error }) => {
+        setWorkspaceStatus(error ? 'CONTA CONECTADA · SINCRONIZAÇÃO PENDENTE' : 'CONTA SINCRONIZADA')
+      })
+    }, 800)
+    return () => window.clearTimeout(timer)
+  }, [section, selected, vehicleIndex, buildSteps, savedParts, marketParts, vehicles, projectBackground, user?.id, workspaceReady])
   useEffect(() => { window.localStorage.removeItem('modlab-build-chat') }, [])
   useEffect(() => { window.localStorage.setItem(chatStorageKey, JSON.stringify(buildChatMessages)); buildChatEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }) }, [buildChatMessages, buildChatStatus, chatStorageKey])
   useEffect(() => {
@@ -814,7 +877,7 @@ function DesignLab({ user, onSignOut }: { user?: User | null; onSignOut?: () => 
   const vehicleSetup = vehicleSetupIndex === null ? null : vehicles[vehicleSetupIndex]
   const vehicleSetupModal = vehicleSetup ? <div className="vehicle-picker-backdrop" role="dialog" aria-modal="true" aria-label="Configurar veículo"><form className="vehicle-setup" onSubmit={confirmVehicleSetup}><header><div><span className="eyebrow">INICIAR BUILD</span><h2>Esse é o seu carro?</h2><p>{vehicleSetup.name} será adicionado ao seu projeto. O ano é opcional.</p></div><button type="button" aria-label="Fechar" onClick={() => setVehicleSetupIndex(null)}><X size={18} /></button></header><div className="vehicle-setup__vehicle">{vehicleSetup.image ? <img src={vehicleSetup.image} alt="" /> : <span><CarFront size={22} /></span>}<strong>{vehicleSetup.name}</strong></div><label>ANO DO VEÍCULO <small>(opcional)</small><input inputMode="numeric" pattern="[0-9]{4}" min="1950" max="2030" value={vehicleYear} onChange={(event) => setVehicleYear(event.target.value.replace(/[^0-9]/g, '').slice(0, 4))} placeholder="Ex.: 2020" autoFocus /></label><footer><span>Você poderá adicionar uma foto real na próxima tela.</span><button type="submit">Abrir oficina <ChevronRight size={16} /></button></footer></form></div> : null
   const vehiclePicker = vehiclePickerOpen ? <div className="vehicle-picker-backdrop" role="dialog" aria-modal="true" aria-label="Trocar veículo"><section className="vehicle-picker"><header><div><span className="eyebrow">GARAGEM MODLAB</span><h2>Escolha seu veículo</h2><p>Selecione um projeto e confirme versão e ano antes de personalizar.</p></div><button aria-label="Fechar seletor" onClick={() => setVehiclePickerOpen(false)}><X size={18} /></button></header><div className="vehicle-picker__list">{vehicles.slice(0, 12).map((car, index) => <button className={vehicleIndex === index ? 'selected' : ''} key={car.name} onClick={() => openVehicleSetup(index)}>{car.image ? <img src={car.image} alt="" /> : <span><ImageOff size={16} /></span>}<div><small>MODELO {String(index + 1).padStart(3, '0')}</small><strong>{car.name}</strong><em>{car.version && car.year ? `${car.version} · ${car.year}` : 'Informe versão e ano'}</em></div>{vehicleIndex === index && <Check size={16} />}</button>)}</div><footer><button onClick={() => { setVehiclePickerOpen(false); setScreen('GARAGEM') }}><Search size={15} /> Ver catálogo completo</button><span>{vehicles.length} modelos no catálogo local</span></footer></section></div> : null
-  const renderShowcaseHeader = () => <><header className="showcase-header"><a className="showcase-brand" href="/"><img src="/modlab-logo.png" alt="Modlab" /><strong>MODLAB <em>/ BETA</em></strong></a><nav>{['GARAGEM', 'BUILD', 'TUNING', 'MERCADO'].map((item) => <button onClick={() => setScreen(item)} className={item === screen ? 'active' : ''} key={item}>{item}</button>)}</nav><div className="showcase-profile"><i />{user ? <><span title={user.email}>{user.email}</span><button type="button" className="showcase-profile__account" onClick={() => setScreen('PERFIL')} title="Abrir perfil" aria-label="Abrir perfil"><UserRound size={15} /></button></> : <span>BETA LOCAL</span>}{onSignOut && <button type="button" onClick={onSignOut} title="Sair da conta" aria-label="Sair da conta"><LogOut size={14} /></button>}</div></header><div className="showcase-subnav"><span>{screen === 'GARAGEM' ? 'GARAGEM / CATÁLOGO DE VEÍCULOS' : screen === 'PERFIL' ? 'CONTA / PERFIL' : 'OFICINA / PERSONALIZAÇÃO'}</span><span>{user ? 'CONTA CONECTADA' : 'ALTERAÇÕES SALVAS NESTE DISPOSITIVO'}</span>{screen !== 'PERFIL' && <button onClick={() => setVehiclePickerOpen(true)}><CarFront size={15} /> Veículo atual</button>}</div>{vehiclePicker}{vehicleSetupModal}</>
+  const renderShowcaseHeader = () => <><header className="showcase-header"><a className="showcase-brand" href="/"><img src="/modlab-logo.png" alt="Modlab" /><strong>MODLAB <em>/ BETA</em></strong></a><nav>{['GARAGEM', 'BUILD', 'TUNING', 'MERCADO'].map((item) => <button onClick={() => setScreen(item)} className={item === screen ? 'active' : ''} key={item}>{item}</button>)}</nav><div className="showcase-profile"><i />{user ? <><span title={user.email}>{user.email}</span><button type="button" className="showcase-profile__account" onClick={() => setScreen('PERFIL')} title="Abrir perfil" aria-label="Abrir perfil"><UserRound size={15} /></button></> : <span>BETA LOCAL</span>}{onSignOut && <button type="button" onClick={onSignOut} title="Sair da conta" aria-label="Sair da conta"><LogOut size={14} /></button>}</div></header><div className="showcase-subnav"><span>{screen === 'GARAGEM' ? 'GARAGEM / CATÁLOGO DE VEÍCULOS' : screen === 'PERFIL' ? 'CONTA / PERFIL' : 'OFICINA / PERSONALIZAÇÃO'}</span><span>{workspaceStatus}</span>{screen !== 'PERFIL' && <button onClick={() => setVehiclePickerOpen(true)}><CarFront size={15} /> Veículo atual</button>}</div>{vehiclePicker}{vehicleSetupModal}</>
   if (screen === 'PERFIL' && user) return <section className="showcase-site" aria-label="Perfil"><header className="showcase-header"><a className="showcase-brand" href="/"><img src="/modlab-logo.png" alt="Modlab" /><strong>MODLAB <em>/ BETA</em></strong></a><nav>{['GARAGEM', 'BUILD', 'TUNING', 'MERCADO'].map((item) => <button onClick={() => setScreen(item)} key={item}>{item}</button>)}</nav><div className="showcase-profile"><i /><span>{user.email}</span></div></header><ProfilePage user={user} onSignOut={onSignOut} onBack={() => setScreen('TUNING')} /></section>
   if (screen === 'GARAGEM' && garageQuery.trim()) return <section className="showcase-site" aria-label="Resultados de busca da garagem">
     {renderShowcaseHeader()}
@@ -898,6 +961,7 @@ export default function App() {
   const engineEndTimerRef = useRef<number | null>(null)
   const [navOpen, setNavOpen] = useState(false)
   const [authReady, setAuthReady] = useState(!isSupabaseConfigured)
+  const [authNotice, setAuthNotice] = useState('')
   const [user, setUser] = useState<User | null>(null)
   const [passwordRecovery, setPasswordRecovery] = useState(false)
   const [activeProjectName, setActiveProjectName] = useState<string>()
@@ -909,9 +973,14 @@ export default function App() {
   useEffect(() => {
     if (!supabase) return
     let active = true
-    void supabase.auth.getSession().then(({ data: { session } }) => {
+    void supabase.auth.getSession().then(({ data: { session }, error }) => {
       if (!active) return
       setUser(session?.user ?? null)
+      setAuthNotice(error ? readableAuthError(error.message) : '')
+      setAuthReady(true)
+    }).catch((error: unknown) => {
+      if (!active) return
+      setAuthNotice(readableAuthError(error instanceof Error ? error.message : ''))
       setAuthReady(true)
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -984,7 +1053,7 @@ export default function App() {
   const introOverlay = <section className={introEntered ? 'site-intro site-intro--hidden' : 'site-intro site-intro--active'} aria-label="Entrada da garagem"><div className="site-intro__panel"><img src="/modlab-logo.png" alt="Modlab" /><span>MODLAB / BETA</span><h1>Entre na garagem.</h1><button type="button" onClick={() => void enterWorkshop()}>Entrar na garagem <span>↗</span></button></div></section>
   if (!authReady) return <main className="auth-page"><section className="auth-card"><p>Conectando ao Modlab…</p></section></main>
   if (isSupabaseConfigured && passwordRecovery && user) return <LoginPage recoveryUser={user} onRecoveryDone={() => setPasswordRecovery(false)} />
-  if (isSupabaseConfigured && !user) return <LoginPage />
+  if (isSupabaseConfigured && !user) return <LoginPage authNotice={authNotice} onRetryConnection={() => window.location.reload()} />
   if (active === 7) return <><audio ref={engineAudioRef} src="/audio/vw-r32-v6.mp3" playsInline preload="auto" />{introOverlay}<DesignLab user={user} onSignOut={isSupabaseConfigured ? signOut : undefined} /></>
   return <><audio ref={engineAudioRef} src="/audio/vw-r32-v6.mp3" playsInline preload="auto" />{introOverlay}<div className="app-shell"><Sidebar active={active} onChange={navigate} open={navOpen} onClose={() => setNavOpen(false)} />{navOpen && <button className="backdrop" onClick={() => setNavOpen(false)} aria-label="Fechar menu" />}<main><header className="page-header"><button className="menu-button" onClick={() => setNavOpen(true)} aria-label="Abrir menu"><Menu size={20} /></button><div><h1>{current.title}</h1>{active !== 1 && <p>{current.description}</p>}</div></header><AppContent active={active} projects={projects} activeProjectName={activeProjectName} onNavigate={navigate} onAddVehicle={addVehicle} onOpenProject={openProject} /></main></div></>
 }
