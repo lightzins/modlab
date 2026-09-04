@@ -70,8 +70,6 @@ main { grid-column: 2; min-width: 0; min-height: 100vh; padding: 34px 34px 42px;
 .showcase-profile > button { display: grid; place-items: center; padding: 5px; border: 0; color: inherit; background: transparent; cursor: pointer; }
 .showcase-profile__account { width: 28px; height: 28px; display: grid !important; place-items: center; margin-left: 2px !important; padding: 0 !important; border: 1px solid rgba(0,245,160,.45) !important; border-radius: 50%; color: var(--ml-green) !important; background: rgba(0,245,160,.08) !important; }
 .showcase-profile__account:hover { background: rgba(0,245,160,.18) !important; }
-.showcase-profile__sound { width: 26px; height: 26px; margin-left: 0 !important; border: 1px solid rgba(247,247,247,.18) !important; border-radius: 50%; color: var(--ml-green) !important; background: rgba(0,245,160,.05) !important; }
-.showcase-profile__sound:hover { border-color: var(--ml-green) !important; background: rgba(0,245,160,.14) !important; }
 .page-header { width: 720px; max-width: 100%; display: flex; align-items: center; gap: 12px; margin-bottom: 23px; }
 .page-header h1 { margin: 0 0 6px; font-size: 23px; line-height: 1; letter-spacing: -.55px; }
 .page-header p { margin: 0; color: #aaa097; font-size: 10px; }
