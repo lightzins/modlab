@@ -6,7 +6,7 @@ import {
   CircleDollarSign, Clock3, Database, Eye, Gauge, Grid2X2,
   Bot, ImageOff, Languages, LoaderCircle, Menu, Moon, MoreHorizontal, Plus, Ruler, Save,
   LogOut, MessageCircle, Search, Send, Settings, ShieldCheck, SlidersHorizontal, Sparkles, Trash2,
-  ImageUp, KeyRound, Mail, UserRound, Wrench, X, Zap,
+  ImageUp, KeyRound, Mail, UserRound, Volume2, Wrench, X, Zap,
 } from 'lucide-react'
 
 type NavItem = { label: string; title: string; description: string; icon: ComponentType<{ size?: number; strokeWidth?: number }> }
@@ -559,7 +559,7 @@ function SettingsPage() {
   </section>
 }
 
-function DesignLab({ user, onSignOut }: { user?: User | null; onSignOut?: () => void }) {
+function DesignLab({ user, onSignOut, onPlayEngine }: { user?: User | null; onSignOut?: () => void; onPlayEngine?: () => void }) {
   const chatStorageKey = user ? `modlab-build-chat:${user.id}` : 'modlab-build-chat:local'
   const betaStorageScope = user?.id ?? 'local'
   const [screen, setScreen] = useState('GARAGEM')
@@ -814,7 +814,7 @@ function DesignLab({ user, onSignOut }: { user?: User | null; onSignOut?: () => 
   const vehicleSetup = vehicleSetupIndex === null ? null : vehicles[vehicleSetupIndex]
   const vehicleSetupModal = vehicleSetup ? <div className="vehicle-picker-backdrop" role="dialog" aria-modal="true" aria-label="Configurar veículo"><form className="vehicle-setup" onSubmit={confirmVehicleSetup}><header><div><span className="eyebrow">INICIAR BUILD</span><h2>Esse é o seu carro?</h2><p>{vehicleSetup.name} será adicionado ao seu projeto. O ano é opcional.</p></div><button type="button" aria-label="Fechar" onClick={() => setVehicleSetupIndex(null)}><X size={18} /></button></header><div className="vehicle-setup__vehicle">{vehicleSetup.image ? <img src={vehicleSetup.image} alt="" /> : <span><CarFront size={22} /></span>}<strong>{vehicleSetup.name}</strong></div><label>ANO DO VEÍCULO <small>(opcional)</small><input inputMode="numeric" pattern="[0-9]{4}" min="1950" max="2030" value={vehicleYear} onChange={(event) => setVehicleYear(event.target.value.replace(/[^0-9]/g, '').slice(0, 4))} placeholder="Ex.: 2020" autoFocus /></label><footer><span>Você poderá adicionar uma foto real na próxima tela.</span><button type="submit">Abrir oficina <ChevronRight size={16} /></button></footer></form></div> : null
   const vehiclePicker = vehiclePickerOpen ? <div className="vehicle-picker-backdrop" role="dialog" aria-modal="true" aria-label="Trocar veículo"><section className="vehicle-picker"><header><div><span className="eyebrow">GARAGEM MODLAB</span><h2>Escolha seu veículo</h2><p>Selecione um projeto e confirme versão e ano antes de personalizar.</p></div><button aria-label="Fechar seletor" onClick={() => setVehiclePickerOpen(false)}><X size={18} /></button></header><div className="vehicle-picker__list">{vehicles.slice(0, 12).map((car, index) => <button className={vehicleIndex === index ? 'selected' : ''} key={car.name} onClick={() => openVehicleSetup(index)}>{car.image ? <img src={car.image} alt="" /> : <span><ImageOff size={16} /></span>}<div><small>MODELO {String(index + 1).padStart(3, '0')}</small><strong>{car.name}</strong><em>{car.version && car.year ? `${car.version} · ${car.year}` : 'Informe versão e ano'}</em></div>{vehicleIndex === index && <Check size={16} />}</button>)}</div><footer><button onClick={() => { setVehiclePickerOpen(false); setScreen('GARAGEM') }}><Search size={15} /> Ver catálogo completo</button><span>{vehicles.length} modelos no catálogo local</span></footer></section></div> : null
-  const renderShowcaseHeader = () => <><header className="showcase-header"><a className="showcase-brand" href="/"><img src="/modlab-logo.png" alt="Modlab" /><strong>MODLAB <em>/ BETA</em></strong></a><nav>{['GARAGEM', 'BUILD', 'TUNING', 'MERCADO'].map((item) => <button onClick={() => setScreen(item)} className={item === screen ? 'active' : ''} key={item}>{item}</button>)}</nav><div className="showcase-profile"><i />{user ? <><span title={user.email}>{user.email}</span><button type="button" className="showcase-profile__account" onClick={() => setScreen('PERFIL')} title="Abrir perfil" aria-label="Abrir perfil"><UserRound size={15} /></button></> : <span>BETA LOCAL</span>}{onSignOut && <button type="button" onClick={onSignOut} title="Sair da conta" aria-label="Sair da conta"><LogOut size={14} /></button>}</div></header><div className="showcase-subnav"><span>{screen === 'GARAGEM' ? 'GARAGEM / CATÁLOGO DE VEÍCULOS' : screen === 'PERFIL' ? 'CONTA / PERFIL' : 'OFICINA / PERSONALIZAÇÃO'}</span><span>{user ? 'CONTA CONECTADA' : 'ALTERAÇÕES SALVAS NESTE DISPOSITIVO'}</span>{screen !== 'PERFIL' && <button onClick={() => setVehiclePickerOpen(true)}><CarFront size={15} /> Veículo atual</button>}</div>{vehiclePicker}{vehicleSetupModal}</>
+  const renderShowcaseHeader = () => <><header className="showcase-header"><a className="showcase-brand" href="/"><img src="/modlab-logo.png" alt="Modlab" /><strong>MODLAB <em>/ BETA</em></strong></a><nav>{['GARAGEM', 'BUILD', 'TUNING', 'MERCADO'].map((item) => <button onClick={() => setScreen(item)} className={item === screen ? 'active' : ''} key={item}>{item}</button>)}</nav><div className="showcase-profile">{onPlayEngine && <button type="button" className="showcase-profile__sound" onClick={onPlayEngine} title="Tocar som do motor" aria-label="Tocar som do motor"><Volume2 size={14} /></button>}<i />{user ? <><span title={user.email}>{user.email}</span><button type="button" className="showcase-profile__account" onClick={() => setScreen('PERFIL')} title="Abrir perfil" aria-label="Abrir perfil"><UserRound size={15} /></button></> : <span>BETA LOCAL</span>}{onSignOut && <button type="button" onClick={onSignOut} title="Sair da conta" aria-label="Sair da conta"><LogOut size={14} /></button>}</div></header><div className="showcase-subnav"><span>{screen === 'GARAGEM' ? 'GARAGEM / CATÁLOGO DE VEÍCULOS' : screen === 'PERFIL' ? 'CONTA / PERFIL' : 'OFICINA / PERSONALIZAÇÃO'}</span><span>{user ? 'CONTA CONECTADA' : 'ALTERAÇÕES SALVAS NESTE DISPOSITIVO'}</span>{screen !== 'PERFIL' && <button onClick={() => setVehiclePickerOpen(true)}><CarFront size={15} /> Veículo atual</button>}</div>{vehiclePicker}{vehicleSetupModal}</>
   if (screen === 'PERFIL' && user) return <section className="showcase-site" aria-label="Perfil"><header className="showcase-header"><a className="showcase-brand" href="/"><img src="/modlab-logo.png" alt="Modlab" /><strong>MODLAB <em>/ BETA</em></strong></a><nav>{['GARAGEM', 'BUILD', 'TUNING', 'MERCADO'].map((item) => <button onClick={() => setScreen(item)} key={item}>{item}</button>)}</nav><div className="showcase-profile"><i /><span>{user.email}</span></div></header><ProfilePage user={user} onSignOut={onSignOut} onBack={() => setScreen('TUNING')} /></section>
   if (screen === 'GARAGEM' && garageQuery.trim()) return <section className="showcase-site" aria-label="Resultados de busca da garagem">
     {renderShowcaseHeader()}
@@ -978,24 +978,9 @@ export default function App() {
       engineEndTimerRef.current = window.setTimeout(() => { audio.pause(); audio.currentTime = 0 }, 1_800)
     } catch { /* A entrada continua mesmo sem saída de áudio disponível. */ }
   }
-  useEffect(() => {
-    if (!authReady) return
-    void enterWorkshop()
-    const playOnFirstInteraction = () => {
-      void enterWorkshop()
-      window.removeEventListener('pointerdown', playOnFirstInteraction)
-      window.removeEventListener('keydown', playOnFirstInteraction)
-    }
-    window.addEventListener('pointerdown', playOnFirstInteraction, { once: true })
-    window.addEventListener('keydown', playOnFirstInteraction, { once: true })
-    return () => {
-      window.removeEventListener('pointerdown', playOnFirstInteraction)
-      window.removeEventListener('keydown', playOnFirstInteraction)
-    }
-  }, [authReady])
   if (!authReady) return <main className="auth-page"><section className="auth-card"><p>Conectando ao Modlab…</p></section></main>
   if (isSupabaseConfigured && passwordRecovery && user) return <LoginPage recoveryUser={user} onRecoveryDone={() => setPasswordRecovery(false)} />
   if (isSupabaseConfigured && !user) return <LoginPage />
-  if (active === 7) return <><audio ref={engineAudioRef} src="/audio/vw-r32-v6.mp3" playsInline preload="auto" /><DesignLab user={user} onSignOut={isSupabaseConfigured ? signOut : undefined} /></>
+  if (active === 7) return <><audio ref={engineAudioRef} src="/audio/vw-r32-v6.mp3" playsInline preload="auto" /><DesignLab user={user} onSignOut={isSupabaseConfigured ? signOut : undefined} onPlayEngine={() => void enterWorkshop()} /></>
   return <><audio ref={engineAudioRef} src="/audio/vw-r32-v6.mp3" playsInline preload="auto" /><div className="app-shell"><Sidebar active={active} onChange={navigate} open={navOpen} onClose={() => setNavOpen(false)} />{navOpen && <button className="backdrop" onClick={() => setNavOpen(false)} aria-label="Fechar menu" />}<main><header className="page-header"><button className="menu-button" onClick={() => setNavOpen(true)} aria-label="Abrir menu"><Menu size={20} /></button><div><h1>{current.title}</h1>{active !== 1 && <p>{current.description}</p>}</div></header><AppContent active={active} projects={projects} activeProjectName={activeProjectName} onNavigate={navigate} onAddVehicle={addVehicle} onOpenProject={openProject} /></main></div></>
 }
